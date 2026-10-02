@@ -1,0 +1,20 @@
+.card{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:10px;
+}
+
+.card-header{
+    display:flex;
+    flex-direction:row;
+    gap:10px;
+    padding:10px;
+}
+
+.card-header-info{
+    display:flex;
+    flex-direction:row;
+    gap:4px;
+    padding:4px;
+}
