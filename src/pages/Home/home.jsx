@@ -12,6 +12,11 @@ import {
 } from '@ionic/react';
 
 const Home = () => {
+
+const Lista = [{id:1,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'},
+                {id:2,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'},
+                {id:3,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'},
+            {id:4,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'}]
 return (
     <IonPage>
         <IonHeader className='ion-no-border'>
@@ -32,7 +37,9 @@ return (
             <button> Dev </button>
             <button> Diseño </button>
         </div>
-        <LinkCard titulo='React' url='react.dev' imagen='https://ionicframework.com/docs/img/demos/thumbnail.svg' tiempo = '2h'/>
+        <div className='list-card'>
+            {Lista.map((obj)=> <LinkCard key={obj.id} titulo={obj.titulo} url={obj.url} imagen={obj.imagen} tiempo={obj.tiempo}/>)}
+        </div>
         </IonContent>
     </IonPage>
 );

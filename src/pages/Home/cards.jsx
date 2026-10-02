@@ -3,20 +3,22 @@ import './cards.css'
 const LinkCard=({titulo,url,imagen,tiempo})=>{
     return(
         <article className='card'>
+            <img src={imagen}/>
             <header className='card-header'>
-                <img src={imagen}/>
+                <div className='card-header-top'>
                 <div className='card-header-info'>
                     <strong>{titulo}</strong>
                     <span> {url} </span>
                 </div>
-                <button type = 'submit' className='card-menu-button'>
+                <button type = 'submit'>
                         ⋮
-                </button>   
-            </header>
-            <div className='card-footer'>
+                </button>
+                </div>
+                <div className='card-footer'>
                     <button> Dev </button>
                     <p> Hace {tiempo} </p>
-            </div>
+                </div>   
+            </header>
         </article>
     )
 }

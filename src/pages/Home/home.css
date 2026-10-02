@@ -57,3 +57,10 @@
     --padding-start: 16px; 
     --padding-end: 16px;   
 }
+
+.list-card{
+    display: flex;
+    flex-direction: column;
+    gap:16px;
+    margin-top:24px;
+}
