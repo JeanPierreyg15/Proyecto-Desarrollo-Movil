@@ -70,3 +70,8 @@
 
 .card-header-info strong { font-size: 16px; }
 .card-header-info span { font-size: 14px; color: #6b7280; }
+
+.tags-container{
+    display: flex; 
+    gap: 8px;
+}

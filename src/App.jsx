@@ -2,7 +2,8 @@
 import React from 'react';
 import Login from './pages/Login/login.jsx';
 import { Route, Navigate } from 'react-router-dom';
-import { IonApp, IonRouterOutlet } from '@ionic/react';
+import { IonApp, IonRouterOutlet,IonTabs,IonTabBar,IonTabButton ,IonLabel,IonIcon} from '@ionic/react';
+import { homeOutline, pricetagsOutline, personOutline } from 'ionicons/icons';
 import { IonReactRouter } from '@ionic/react-router';
 
 // Vistas
@@ -11,11 +12,32 @@ import Home from './pages/Home/home.jsx';
 const App = () => (
 <IonApp>
     <IonReactRouter>
-        <IonRouterOutlet>
-            <Route path="/home" element={<Home/>} />
-            <Route path="/login" element={<Login/>}/>
-            <Route path = '/' element={<Navigate replace to="/login" />}/>
-        </IonRouterOutlet>
+            <IonTabs>
+                <IonRouterOutlet>
+                    <Route path="/home" element={<Home/>}/>
+                    
+                </IonRouterOutlet>
+                <IonTabBar slot='bottom'>
+                    <IonTabButton tab="home" href="/home">
+                        <IonIcon icon={homeOutline}/>
+                        <IonLabel>
+                            Inicio
+                        </IonLabel>
+                    </IonTabButton>
+                    <IonTabButton tab="etiquetas" href="/home">
+                        <IonIcon icon={pricetagsOutline} />    
+                        <IonLabel>
+                            Etiquetas
+                        </IonLabel>
+                    </IonTabButton>
+                    <IonTabButton tab="perfil" href="/home">
+                        <IonIcon icon={personOutline}/>
+                        <IonLabel>
+                            Perfil
+                        </IonLabel>
+                    </IonTabButton>
+                </IonTabBar>
+            </IonTabs>
     </IonReactRouter>
 </IonApp>
 );
