@@ -8,16 +8,18 @@ import {
     IonContent,
     IonAvatar,
     IonInput,
-    IonSearchbar
+    IonSearchbar,
+    IonFab,
+    IonFabButton
 } from '@ionic/react';
 
 const Home = () => {
+const Lista = [{id:1,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Diseño' , 'Dev']},
+                {id:2,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Diseño' , 'Dev']},
+                {id:3,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Diseño' , 'Dev']},
+            {id:4,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Diseño' , 'Dev']}]
 
-const Lista = [{id:1,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'},
-                {id:2,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'},
-                {id:3,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'},
-            {id:4,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h'}]
-return (
+return (    
     <IonPage>
         <IonHeader className='ion-no-border'>
             <IonToolbar className="header" > 
@@ -38,8 +40,13 @@ return (
             <button> Diseño </button>
         </div>
         <div className='list-card'>
-            {Lista.map((obj)=> <LinkCard key={obj.id} titulo={obj.titulo} url={obj.url} imagen={obj.imagen} tiempo={obj.tiempo}/>)}
+            {Lista.map((obj)=> <LinkCard key={obj.id} titulo={obj.titulo} url={obj.url} imagen={obj.imagen} tiempo={obj.tiempo} etiquetas={obj.etiquetas}/>)}
         </div>
+        <IonFab vertical="bottom" horizontal="end" slot='fixed'>
+            <IonFabButton>
+                +
+            </IonFabButton>
+        </IonFab>
         </IonContent>
     </IonPage>
 );

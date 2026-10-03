@@ -1,6 +1,6 @@
 import {useState} from 'react'
 import './cards.css'
-const LinkCard=({titulo,url,imagen,tiempo})=>{
+const LinkCard=({titulo,url,imagen,tiempo,etiquetas})=>{
     return(
         <article className='card'>
             <img src={imagen}/>
@@ -15,7 +15,10 @@ const LinkCard=({titulo,url,imagen,tiempo})=>{
                 </button>
                 </div>
                 <div className='card-footer'>
-                    <button> Dev </button>
+                    <div className='tags-container'>
+                        {etiquetas?.map((tipos,index)=>(
+                        <button key={index}> {tipos} </button>))}
+                    </div>
                     <p> Hace {tiempo} </p>
                 </div>   
             </header>
