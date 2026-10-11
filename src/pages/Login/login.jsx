@@ -13,7 +13,7 @@ function Login(){
     const manejarLogin= (e) =>{
         e.preventDefault()
         if(email !== '' && password !== ''){
-            navigate('/home')   
+            navigate('/pages/Home')   
         }
         else{
             mostrarToast({
