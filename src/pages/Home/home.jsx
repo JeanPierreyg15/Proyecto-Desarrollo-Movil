@@ -1,20 +1,21 @@
 import React, { useState } from 'react'
 import './home.css';
 import LinkCard from './cards';
+import Modal from './modal';
 import {
     IonPage,
     IonHeader,
     IonToolbar,
     IonContent,
     IonAvatar,
-    IonInput,
     IonSearchbar,
     IonFab,
-    IonFabButton
+    IonFabButton,
 } from '@ionic/react';
 import FilterButtons from './filterButtons';
 
 const Home = () => {
+const [mostrarModal,setMostrarModal]=useState(false)
 const [textoBusqueda, setTextoBusqueda] = useState('')
 const [categoriasActivas, setCategoriasActivas] = useState([]);
 const Lista = [{id:1,titulo:'Java',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Dev']},
@@ -53,7 +54,7 @@ return (
             </IonToolbar>
         </IonHeader>
         <IonContent className="ion-padding">    
-            <IonSearchbar className='searchBar' type='text' placeholder='Buscar en tu baúl...' value={textoBusqueda} onIonInput={(e) => setTextoBusqueda(e.detail.value)} />
+            <IonSearchbar className='searchBar' type='text' placeholder='Buscar en tu baúl...' value={textoBusqueda} onIonInput={(e) => setTextoBusqueda(e.detail.value)} shape='round'/>
             <FilterButtons
             opciones = {['Todos','Dev','Diseño']}
             activas={categoriasActivas} 
@@ -63,10 +64,11 @@ return (
             {tarjetasFiltradas.map((obj)=> <LinkCard key={obj.id} titulo={obj.titulo} url={obj.url} imagen={obj.imagen} tiempo={obj.tiempo} etiquetas={obj.etiquetas}/>)}
         </div>  
         <IonFab vertical="bottom" horizontal="end" slot='fixed'>
-            <IonFabButton>
+            <IonFabButton onClick={()=> setMostrarModal(true)}>
                 +
             </IonFabButton>
         </IonFab>
+        <Modal isOpen={mostrarModal} cerrarModal={()=>setMostrarModal(false)}/>
         </IonContent>
     </IonPage>
 );

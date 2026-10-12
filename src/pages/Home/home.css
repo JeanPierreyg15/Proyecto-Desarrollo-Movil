@@ -54,7 +54,7 @@
 }
 
 .header {
-    --padding-start: 16px; 
+    --padding-start: 0px; 
     --padding-end: 16px;   
 }
 
@@ -65,3 +65,142 @@
     margin-top:24px;
 }
 
+.cabecera{
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 16px; 
+    margin-bottom: 24px; 
+}
+
+.cabecera p {
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 16px; 
+    margin-bottom: 12px;
+}
+.input-redondeado{
+    --background : rgba(245, 245, 245, 0.553);
+    --border-radius: 20px;
+    --padding-start:16px;
+    --padding-end:16px;
+    --margin-bottom:12px;
+}
+
+.ion-item p{
+    margin: 0 0 8px 4px; 
+    font-size: 12px; 
+    color: #444; 
+    font-weight: 500;
+}
+.ion-item{
+    margin-bottom: 4px;
+    display: flex;
+    flex-direction: column;
+}
+
+.grilla-etiquetas .categories {
+    flex-wrap: wrap;
+    overflow-x: hidden;
+}
+
+.modal-footer{
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    margin: 0;
+}
+
+.modal-footer button{
+    flex: 1; 
+    margin: 0;
+    padding: 12px;
+    border-radius: 20px;
+    border: none;
+    font-weight: bold;
+}
+
+.btn-cancelar{
+    background-color:#f3f4f6;
+    color:black;
+}
+
+.btn-guardar{
+    background-color: #2563eb;
+    color: white;
+}
+
+.btn-guardar:disabled{
+    opacity: 0.5;
+}
+
+
+.tarjeta-previa{
+    display: flex;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 8px; 
+    align-items: center; 
+    gap: 12px; 
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.previa-img{
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    background-color: #d1d5db;
+}
+
+.previa-info{
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center;
+}
+
+.previa-info h4{
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.previa-info p{
+    color: #6b7280; 
+    margin-top: 4px;
+}
+
+.searchBar {
+    --border-radius: 20px;
+    --background: rgba(245, 245, 245, 0.553); 
+    --box-shadow: none; 
+    padding-left: 0; 
+    padding-right: 0;
+
+    padding-top: 0; 
+    margin-top: -10px;
+}
+
+.footer{
+    margin-top: 16px; 
+    background-color: #ffffff;
+}
+
+.contenedor-modal {
+    display: flex;
+    flex-direction: column;
+}
+
+.previa-vacia {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 60px; 
+}
+
+.previa-vacia p {
+    color: #9ca3af; 
+    font-size: 12px;
+    text-align: center;
+    margin: 0;
+    font-style: italic; 
+}

@@ -9,8 +9,8 @@ const Etiquetas = () =>{
 ]
     return(
     <IonPage>
-        <IonHeader>
-            <IonToolbar>
+        <IonHeader className="ion-no-border">
+            <IonToolbar >
                 <div className="header-info">
                 <h1> Etiquetas </h1>
                 <p> 8 categorias </p>
