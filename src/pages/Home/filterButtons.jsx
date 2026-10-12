@@ -13,7 +13,7 @@ const FilterButtons = ({opciones,activas,onToggle}) =>{
                 >
                     {opcion}
                 </button>)
-            })
+            })  
 
             }
         </div>
