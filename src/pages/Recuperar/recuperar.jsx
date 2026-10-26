@@ -11,6 +11,8 @@ function Recuperar() {
     const [password, setPassword] = useState('');
     const [confirmar, setConfirmar] = useState('');
     const [paso, setPaso] = useState('correo');
+    const [intentoEnviar, setIntentoEnviar] = useState(false);
+    const [procesando, setProcesando] = useState(false);
     const [mostrarToast] = useIonToast();
     const router = useIonRouter();
     const { solicitarRecuperacion, restablecerPassword } = useAuth();
@@ -24,25 +26,62 @@ function Recuperar() {
         });
     };
 
-    const manejarCorreo = (e) => {
+    const manejarCorreo = async (e) => {
         e.preventDefault();
+        setIntentoEnviar(true);
+        if (!correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
+            return;
+        }
+
+        setProcesando(true);
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
         const resultado = solicitarRecuperacion({ correo });
         if (!resultado.ok) {
             mostrarError(resultado.mensaje);
+            setProcesando(false);
             return;
         }
         setPaso('clave');
+        setIntentoEnviar(false);
+        setProcesando(false);
     };
 
-    const manejarClave = (e) => {
+    const manejarClave = async (e) => {
         e.preventDefault();
+        setIntentoEnviar(true);
+        if (password.length < 6 || !confirmar || password !== confirmar) {
+            return;
+        }
+
+        setProcesando(true);
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
         const resultado = restablecerPassword({ correo, password, confirmar });
         if (!resultado.ok) {
             mostrarError(resultado.mensaje);
+            setProcesando(false);
             return;
         }
         setPaso('listo');
+        setProcesando(false);
     };
+
+    const errorCorreo = intentoEnviar && paso === 'correo'
+        ? !correo.trim()
+            ? 'Ingresa tu correo electrónico.'
+            : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())
+              ? 'Ingresa un correo electrónico válido.'
+              : ''
+        : '';
+    const errorPassword = intentoEnviar && paso === 'clave' && password.length < 6
+        ? 'Usa al menos 6 caracteres.'
+        : '';
+    const errorConfirmar = intentoEnviar && paso === 'clave'
+        ? !confirmar
+            ? 'Confirma tu contraseña.'
+            : password !== confirmar
+              ? 'Las contraseñas no coinciden.'
+              : ''
+        : '';
 
     return (
         <IonPage>
@@ -57,11 +96,16 @@ function Recuperar() {
                             {paso === 'listo' && 'Ya puedes iniciar sesión con tu nueva contraseña'}
                         </p>
                     </div>
+                    {paso !== 'listo' && (
+                        <div className="auth-notice" role="note">
+                            Modo demostración: los datos solo se conservan durante esta sesión y no se envía ningún correo.
+                        </div>
+                    )}
                     {paso === 'correo' && (
-                        <form onSubmit={manejarCorreo} className="login-form">
+                        <form onSubmit={manejarCorreo} className="login-form" noValidate aria-busy={procesando}>
                             <IonInput
                                 value={correo}
-                                onIonInput={(e) => setCorreo(e.detail.value)}
+                                onIonInput={(e) => setCorreo(e.detail.value ?? '')}
                                 labelPlacement="floating"
                                 className="custom-input"
                                 type="email"
@@ -69,9 +113,14 @@ function Recuperar() {
                                 fill="outline"
                                 shape="round"
                                 color="primary"
+                                autocomplete="email"
+                                inputmode="email"
+                                aria-invalid={Boolean(errorCorreo)}
+                                aria-describedby={errorCorreo ? 'recuperar-correo-error' : undefined}
                             />
-                            <IonButton className="login-button" type="submit" expand="block">
-                                Continuar
+                            {errorCorreo && <p className="auth-field-error" id="recuperar-correo-error" role="alert">{errorCorreo}</p>}
+                            <IonButton className="login-button" type="submit" expand="block" disabled={procesando}>
+                                {procesando ? 'Verificando...' : 'Continuar'}
                             </IonButton>
                             <Link to="/" className="auth-back">
                                 Volver a iniciar sesión
@@ -79,10 +128,10 @@ function Recuperar() {
                         </form>
                     )}
                     {paso === 'clave' && (
-                        <form onSubmit={manejarClave} className="login-form">
+                        <form onSubmit={manejarClave} className="login-form" noValidate aria-busy={procesando}>
                             <IonInput
                                 value={password}
-                                onIonInput={(e) => setPassword(e.detail.value)}
+                                onIonInput={(e) => setPassword(e.detail.value ?? '')}
                                 labelPlacement="floating"
                                 className="custom-input"
                                 type="password"
@@ -90,14 +139,21 @@ function Recuperar() {
                                 fill="outline"
                                 shape="round"
                                 color="primary"
+                                autocomplete="new-password"
+                                aria-invalid={Boolean(errorPassword)}
+                                aria-describedby={errorPassword
+                                    ? 'recuperar-password-ayuda recuperar-password-error'
+                                    : 'recuperar-password-ayuda'}
                             >
                                 <div className="toggle-icon" slot="end">
                                     <IonInputPasswordToggle />
                                 </div>
                             </IonInput>
+                            <p className="auth-field-hint" id="recuperar-password-ayuda">Usa al menos 6 caracteres.</p>
+                            {errorPassword && <p className="auth-field-error" id="recuperar-password-error" role="alert">{errorPassword}</p>}
                             <IonInput
                                 value={confirmar}
-                                onIonInput={(e) => setConfirmar(e.detail.value)}
+                                onIonInput={(e) => setConfirmar(e.detail.value ?? '')}
                                 labelPlacement="floating"
                                 className="custom-input"
                                 type="password"
@@ -105,13 +161,17 @@ function Recuperar() {
                                 fill="outline"
                                 shape="round"
                                 color="primary"
+                                autocomplete="new-password"
+                                aria-invalid={Boolean(errorConfirmar)}
+                                aria-describedby={errorConfirmar ? 'recuperar-confirmar-error' : undefined}
                             >
                                 <div className="toggle-icon" slot="end">
                                     <IonInputPasswordToggle />
                                 </div>
                             </IonInput>
-                            <IonButton className="login-button" type="submit" expand="block">
-                                Guardar contraseña
+                            {errorConfirmar && <p className="auth-field-error" id="recuperar-confirmar-error" role="alert">{errorConfirmar}</p>}
+                            <IonButton className="login-button" type="submit" expand="block" disabled={procesando}>
+                                {procesando ? 'Actualizando...' : 'Guardar contraseña'}
                             </IonButton>
                             <Link to="/" className="auth-back">
                                 Volver a iniciar sesión
