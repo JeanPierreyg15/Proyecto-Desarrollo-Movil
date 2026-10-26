@@ -1,8 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext(null);
-const CLAVE_USUARIOS = 'locker.usuarios';
-const CLAVE_SESION = 'locker.sesion';
 
 const correoValido = (correo = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim());
 
@@ -16,27 +14,6 @@ export function obtenerIniciales(nombre = '') {
         .slice(0, 2)
         .toUpperCase();
     return letras || '?';
-}
-
-function leerJson(clave, respaldo) {
-    try {
-        const bruto = localStorage.getItem(clave);
-        return bruto ? JSON.parse(bruto) : respaldo;
-    } catch {
-        return respaldo;
-    }
-}
-
-function guardarUsuarios(usuarios) {
-    localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(usuarios));
-}
-
-function guardarSesion(usuario) {
-    if (!usuario) {
-        localStorage.removeItem(CLAVE_SESION);
-        return;
-    }
-    localStorage.setItem(CLAVE_SESION, JSON.stringify(usuario));
 }
 
 function sinPassword(usuario) {
@@ -59,14 +36,12 @@ function crearUsuario({ nombre, correo, password }) {
 }
 
 export function AuthProvider({ children }) {
-    const [usuarios, setUsuarios] = useState(() => leerJson(CLAVE_USUARIOS, []));
-    const [usuario, setUsuario] = useState(() => leerJson(CLAVE_SESION, null));
+    const [usuarios, setUsuarios] = useState([]);
+    const [usuario, setUsuario] = useState(null);
 
     const persistir = (lista, sesion) => {
         setUsuarios(lista);
-        guardarUsuarios(lista);
         setUsuario(sesion);
-        guardarSesion(sesion);
     };
 
     const iniciarSesion = ({ correo, password }) => {
@@ -79,7 +54,6 @@ export function AuthProvider({ children }) {
         }
         const sesion = sinPassword(hallado);
         setUsuario(sesion);
-        guardarSesion(sesion);
         return { ok: true };
     };
 
@@ -174,7 +148,6 @@ export function AuthProvider({ children }) {
 
     const cerrarSesion = () => {
         setUsuario(null);
-        guardarSesion(null);
     };
 
     return (
