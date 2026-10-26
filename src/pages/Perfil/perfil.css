@@ -1,0 +1,95 @@
+.header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+}
+
+.header-info h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.header-info p {
+    margin: 0;
+    font-size: 10px;
+    font-weight: normal;
+    text-align: left;
+}
+
+.perfil-avatar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 12px 0 24px;
+    gap: 8px;
+}
+
+.avatar-grande {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80px;
+    height: 80px;
+    background-color: #2563eb;
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.perfil-meta {
+    margin: 0;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.perfil-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 360px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.custom-input {
+    --background: #f9fafb;
+    --padding-start: 15px;
+    --padding-end: 5px;
+    --border-color: #e5e7eb;
+    min-height: 48px !important;
+    height: 48px !important;
+    font-size: 14px;
+}
+
+.login-button {
+    --border-radius: 20px;
+    --border: none;
+    --background: #2563eb;
+    min-height: 46px !important;
+    height: 46px !important;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.logout-button {
+    --border-radius: 20px;
+    min-height: 46px !important;
+    height: 46px !important;
+}
+
+.perfil-vacio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-top: 40px;
+    text-align: center;
+}
+
+.perfil-vacio p {
+    margin: 0;
+    color: #4b5563;
+}

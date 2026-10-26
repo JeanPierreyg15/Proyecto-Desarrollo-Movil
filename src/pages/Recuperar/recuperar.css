@@ -1,0 +1,21 @@
+.auth-success {
+    background-color: #eff6ff;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+}
+
+.auth-success p {
+    margin: 0;
+    font-size: 14px;
+    color: #1e3a8a;
+    line-height: 1.4;
+}
+
+.auth-back {
+    display: block;
+    text-align: center;
+    font-size: 14px;
+    color: #2563eb;
+    text-decoration: none;
+}

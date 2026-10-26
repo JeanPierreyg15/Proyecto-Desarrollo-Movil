@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom';
 import './home.css';
 import LinkCard from './cards';
 import Modal from './modal';
@@ -13,8 +14,11 @@ import {
     IonFabButton,
 } from '@ionic/react';
 import FilterButtons from './filterButtons';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const Home = () => {
+const { usuario } = useAuth()
+const navigate = useNavigate()
 const [mostrarModal,setMostrarModal]=useState(false)
 const [textoBusqueda, setTextoBusqueda] = useState('')
 const [categoriasActivas, setCategoriasActivas] = useState([]);
@@ -48,8 +52,8 @@ return (
                     <h1>Mi Baul</h1>
                     <p>8 links guardados</p>
                 </div>
-                <IonAvatar slot='end' className='avatar'>
-                    <span>JD</span>
+                <IonAvatar slot='end' className='avatar' onClick={() => navigate('/pages/Perfil')}>
+                    <span>{usuario?.iniciales ?? '?'}</span>
                 </IonAvatar>
             </IonToolbar>
         </IonHeader>

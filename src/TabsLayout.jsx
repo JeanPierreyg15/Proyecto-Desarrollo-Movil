@@ -3,6 +3,7 @@ import { homeOutline, pricetagsOutline, personOutline } from 'ionicons/icons';
 import { Route } from "react-router-dom";
 import Home from "./pages/Home/home";
 import Etiquetas from "./pages/Etiquetas/etiquetas";
+import Perfil from "./pages/Perfil/perfil";
 
 const Layout = () =>{
     return(
@@ -10,6 +11,7 @@ const Layout = () =>{
             <IonRouterOutlet>
                 <Route path="/pages/Home" element={<Home/>}/>
                 <Route path="/pages/Etiquetas" element={<Etiquetas/>} />
+                <Route path="/pages/Perfil" element={<Perfil/>} />
             </IonRouterOutlet>
                 <IonTabBar slot='bottom'>
                     <IonTabButton tab="home" href="/pages/Home">
@@ -24,7 +26,7 @@ const Layout = () =>{
                             Etiquetas
                         </IonLabel>
                     </IonTabButton>
-                    <IonTabButton tab="perfil" href="/pages/Home">
+                    <IonTabButton tab="perfil" href="/pages/Perfil">
                         <IonIcon icon={personOutline}/>
                         <IonLabel>
                             Perfil
