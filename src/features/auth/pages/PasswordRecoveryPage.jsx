@@ -96,11 +96,6 @@ function Recuperar() {
                             {paso === 'listo' && 'Ya puedes iniciar sesión con tu nueva contraseña'}
                         </p>
                     </div>
-                    {paso !== 'listo' && (
-                        <div className="auth-notice" role="note">
-                            Modo demostración: los datos solo se conservan durante esta sesión y no se envía ningún correo.
-                        </div>
-                    )}
                     {paso === 'correo' && (
                         <form onSubmit={manejarCorreo} className="login-form" noValidate aria-busy={procesando}>
                             <IonInput
