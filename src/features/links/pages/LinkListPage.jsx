@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
-import './home.css';
-import LinkCard from './cards';
-import Modal from './modal';
+import React, { useEffect, useState } from 'react'
+import './LinkListPage.css';
+import LinkCard from '../components/LinkCard.jsx';
+import LinkFormModal from '../components/LinkFormModal.jsx';
 import {
     IonPage,
     IonHeader,
@@ -12,20 +12,43 @@ import {
     IonFab,
     IonFabButton,
     useIonRouter,
+    useIonToast,
 } from '@ionic/react';
-import FilterButtons from './filterButtons';
-import { useAuth } from '../../context/AuthContext.jsx';
+import FilterButtons from '../components/FilterButtons.jsx';
+import { useAuth } from '../../auth/context/AuthContext.jsx';
+import { linkService } from '../services/linkService.js';
 
 const Home = () => {
 const { usuario } = useAuth()
 const router = useIonRouter()
+const [mostrarToast] = useIonToast()
+const [links, setLinks] = useState([])
 const [mostrarModal,setMostrarModal]=useState(false)
 const [textoBusqueda, setTextoBusqueda] = useState('')
 const [categoriasActivas, setCategoriasActivas] = useState([]);
-const Lista = [{id:1,titulo:'Java',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Dev']},
-                {id:2,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Diseño' , 'Dev']},
-                {id:3,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Diseño' , 'Dev']},
-            {id:4,titulo:'React',url:'react.dev',imagen:'https://ionicframework.com/docs/img/demos/thumbnail.svg',tiempo:'2h',etiquetas:['Diseño' , 'Dev']}]
+useEffect(() => {
+    let activo = true;
+    linkService.listar()
+        .then((datos) => {
+            if (activo) {
+                setLinks(datos);
+            }
+        })
+        .catch(() => {
+            if (activo) {
+                mostrarToast({
+                    message: 'No se pudieron cargar tus enlaces.',
+                    duration: 2500,
+                    color: 'danger',
+                    position: 'bottom',
+                });
+            }
+        });
+
+    return () => {
+        activo = false;
+    };
+}, [mostrarToast]);
 const manejarFiltro = (categoriaClic)=>{
     if(categoriaClic==='Todos'){
         setCategoriasActivas ([])
@@ -39,7 +62,7 @@ const manejarFiltro = (categoriaClic)=>{
     }
 
 }
-const tarjetasFiltradas = Lista.filter((obj)=>{
+const tarjetasFiltradas = links.filter((obj)=>{
     const coincideTexto = obj.titulo.toLowerCase().includes(textoBusqueda.toLowerCase())
     const coincideCategoria = categoriasActivas.length === 0 || categoriasActivas.some((cat) => obj.etiquetas.includes(cat))
     return coincideTexto && coincideCategoria
@@ -72,7 +95,7 @@ return (
                 +
             </IonFabButton>
         </IonFab>
-        <Modal isOpen={mostrarModal} cerrarModal={()=>setMostrarModal(false)}/>
+        <LinkFormModal isOpen={mostrarModal} cerrarModal={()=>setMostrarModal(false)}/>
         </IonContent>
     </IonPage>
 );

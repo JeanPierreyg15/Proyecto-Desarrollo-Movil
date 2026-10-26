@@ -1,12 +1,37 @@
-import React from "react"
-import TagCard from './tagCard.jsx'
-import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar,IonRow,IonCol } from "@ionic/react"
-import './etiquetas.css'
-const Etiquetas = () =>{
-    const datosEtiquetas = [
-    { id: 1, titulo: 'Dev', cantidad: 3, icono: '💻' }, 
-    { id: 2, titulo: 'Diseño', cantidad: 2, icono: '🎨' }
-]
+import React, { useEffect, useState } from 'react';
+import TagCard from '../components/TagCard.jsx';
+import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar, IonRow, IonCol, useIonToast } from '@ionic/react';
+import './TagsPage.css';
+import { tagService } from '../services/tagService.js';
+
+const TagsPage = () => {
+    const [datosEtiquetas, setDatosEtiquetas] = useState([]);
+    const [mostrarToast] = useIonToast();
+
+    useEffect(() => {
+        let activo = true;
+        tagService.listar()
+            .then((datos) => {
+                if (activo) {
+                    setDatosEtiquetas(datos);
+                }
+            })
+            .catch(() => {
+                if (activo) {
+                    mostrarToast({
+                        message: 'No se pudieron cargar las etiquetas.',
+                        duration: 2500,
+                        color: 'danger',
+                        position: 'bottom',
+                    });
+                }
+            });
+
+        return () => {
+            activo = false;
+        };
+    }, [mostrarToast]);
+
     return(
     <IonPage>
         <IonHeader className="ion-no-border">
@@ -41,4 +66,4 @@ const Etiquetas = () =>{
     )
 }
 
-export default Etiquetas
+export default TagsPage

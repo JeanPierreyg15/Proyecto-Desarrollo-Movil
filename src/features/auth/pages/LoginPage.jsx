@@ -1,9 +1,9 @@
 import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle, useIonRouter } from '@ionic/react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext.jsx';
-import './login.css';
-import logo from './media/logo.svg';
+import { useAuth } from '../context/AuthContext.jsx';
+import '../auth.css';
+import logo from '../assets/logo.svg';
 
 function Login() {
     const [email, setEmail] = useState('');
@@ -33,7 +33,7 @@ function Login() {
 
         setProcesando(true);
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const resultado = iniciarSesion({ correo: email, password });
+        const resultado = await iniciarSesion({ correo: email, password });
         if (!resultado.ok) {
             mostrarToast({
                 message: resultado.mensaje,

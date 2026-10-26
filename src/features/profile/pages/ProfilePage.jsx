@@ -12,8 +12,8 @@ import {
     useIonRouter,
 } from '@ionic/react';
 import { createOutline, linkOutline } from 'ionicons/icons';
-import { useAuth } from '../../context/AuthContext.jsx';
-import './perfil.css';
+import { useAuth } from '../../auth/context/AuthContext.jsx';
+import './ProfilePage.css';
 
 function Perfil() {
     const { usuario, actualizarPerfil, cerrarSesion } = useAuth();
@@ -28,9 +28,9 @@ function Perfil() {
         setCorreo(usuario?.correo ?? '');
     }, [usuario]);
 
-    const manejarGuardar = (e) => {
+    const manejarGuardar = async (e) => {
         e.preventDefault();
-        const resultado = actualizarPerfil({ nombre, correo });
+        const resultado = await actualizarPerfil({ nombre, correo });
         mostrarToast({
             message: resultado.ok ? 'Perfil actualizado' : resultado.mensaje,
             duration: 2000,
@@ -39,8 +39,8 @@ function Perfil() {
         });
     };
 
-    const manejarCerrarSesion = () => {
-        cerrarSesion();
+    const manejarCerrarSesion = async () => {
+        await cerrarSesion();
         router.push('/', 'root', 'replace');
     };
 

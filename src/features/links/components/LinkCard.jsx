@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import './cards.css'
+import './LinkCard.css'
 const LinkCard=({titulo,url,imagen,tiempo,etiquetas})=>{
     return(
         <article className='card'>

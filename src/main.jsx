@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
+import App from './app/App.jsx';
 
 
 import { setupIonicReact } from '@ionic/react';
@@ -18,7 +18,7 @@ import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 
 
-import './app.css';
+import './app/app.css';
 
 setupIonicReact();
 

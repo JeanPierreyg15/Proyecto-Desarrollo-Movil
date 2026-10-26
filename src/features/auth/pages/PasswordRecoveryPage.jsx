@@ -1,10 +1,10 @@
 import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle, useIonRouter } from '@ionic/react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext.jsx';
-import logo from '../Login/media/logo.svg';
-import '../Login/login.css';
-import './recuperar.css';
+import { useAuth } from '../context/AuthContext.jsx';
+import logo from '../assets/logo.svg';
+import '../auth.css';
+import './PasswordRecoveryPage.css';
 
 function Recuperar() {
     const [correo, setCorreo] = useState('');
@@ -35,7 +35,7 @@ function Recuperar() {
 
         setProcesando(true);
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const resultado = solicitarRecuperacion({ correo });
+        const resultado = await solicitarRecuperacion({ correo });
         if (!resultado.ok) {
             mostrarError(resultado.mensaje);
             setProcesando(false);
@@ -55,7 +55,7 @@ function Recuperar() {
 
         setProcesando(true);
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const resultado = restablecerPassword({ correo, password, confirmar });
+        const resultado = await restablecerPassword({ correo, password, confirmar });
         if (!resultado.ok) {
             mostrarError(resultado.mensaje);
             setProcesando(false);

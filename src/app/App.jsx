@@ -2,10 +2,10 @@ import React from 'react';
 import { Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { AuthProvider } from './context/AuthContext.jsx';
-import Login from './pages/Login/login.jsx';
-import Registro from './pages/Registro/registro.jsx';
-import Recuperar from './pages/Recuperar/recuperar.jsx';
+import { AuthProvider } from '../features/auth/context/AuthContext.jsx';
+import LoginPage from '../features/auth/pages/LoginPage.jsx';
+import RegisterPage from '../features/auth/pages/RegisterPage.jsx';
+import PasswordRecoveryPage from '../features/auth/pages/PasswordRecoveryPage.jsx';
 import Layout from './TabsLayout.jsx';
 
 const App = () => (
@@ -13,9 +13,9 @@ const App = () => (
         <AuthProvider>
             <IonReactRouter>
                 <IonRouterOutlet>
-                    <Route path="/" element={<Login />} />
-                    <Route path="/registro" element={<Registro />} />
-                    <Route path="/recuperar" element={<Recuperar />} />
+                    <Route path="/" element={<LoginPage />} />
+                    <Route path="/registro" element={<RegisterPage />} />
+                    <Route path="/recuperar" element={<PasswordRecoveryPage />} />
                     <Route path="/pages/*" element={<Layout />} />
                 </IonRouterOutlet>
             </IonReactRouter>

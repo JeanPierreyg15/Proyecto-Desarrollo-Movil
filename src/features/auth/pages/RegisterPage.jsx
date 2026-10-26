@@ -1,9 +1,9 @@
 import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle, useIonRouter } from '@ionic/react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext.jsx';
-import logo from '../Login/media/logo.svg';
-import '../Login/login.css';
+import { useAuth } from '../context/AuthContext.jsx';
+import logo from '../assets/logo.svg';
+import '../auth.css';
 
 function Registro() {
     const [nombre, setNombre] = useState('');
@@ -45,7 +45,7 @@ function Registro() {
 
         setProcesando(true);
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const resultado = registrar({ nombre, correo, password, confirmar });
+        const resultado = await registrar({ nombre, correo, password, confirmar });
         if (!resultado.ok) {
             mostrarToast({
                 message: resultado.mensaje,
