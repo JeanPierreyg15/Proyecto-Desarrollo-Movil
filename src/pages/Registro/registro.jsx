@@ -1,6 +1,6 @@
-import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle } from '@ionic/react';
+import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle, useIonRouter } from '@ionic/react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import logo from '../Login/media/logo.svg';
 import '../Login/login.css';
@@ -11,7 +11,7 @@ function Registro() {
     const [password, setPassword] = useState('');
     const [confirmar, setConfirmar] = useState('');
     const [mostrarToast] = useIonToast();
-    const navigate = useNavigate();
+    const router = useIonRouter();
     const { registrar } = useAuth();
 
     const manejarRegistro = (e) => {
@@ -26,7 +26,7 @@ function Registro() {
             });
             return;
         }
-        navigate('/pages/Home');
+        router.push('/pages/Home', 'root', 'replace');
     };
 
     return (

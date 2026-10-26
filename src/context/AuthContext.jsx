@@ -1,6 +1,10 @@
 import { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext(null);
+const CLAVE_USUARIOS = 'locker.usuarios';
+const CLAVE_SESION = 'locker.sesion';
+
+const correoValido = (correo = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim());
 
 export function obtenerIniciales(nombre = '') {
     const letras = nombre
@@ -14,25 +18,68 @@ export function obtenerIniciales(nombre = '') {
     return letras || '?';
 }
 
-function crearUsuario({ nombre, correo }) {
+function leerJson(clave, respaldo) {
+    try {
+        const bruto = localStorage.getItem(clave);
+        return bruto ? JSON.parse(bruto) : respaldo;
+    } catch {
+        return respaldo;
+    }
+}
+
+function guardarUsuarios(usuarios) {
+    localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(usuarios));
+}
+
+function guardarSesion(usuario) {
+    if (!usuario) {
+        localStorage.removeItem(CLAVE_SESION);
+        return;
+    }
+    localStorage.setItem(CLAVE_SESION, JSON.stringify(usuario));
+}
+
+function sinPassword(usuario) {
+    if (!usuario) {
+        return null;
+    }
+    const { password, ...publico } = usuario;
+    return publico;
+}
+
+function crearUsuario({ nombre, correo, password }) {
     return {
         id: crypto.randomUUID(),
         nombre: nombre.trim(),
         correo: correo.trim().toLowerCase(),
+        password,
         iniciales: obtenerIniciales(nombre),
         creadoEn: new Date().toISOString(),
     };
 }
 
 export function AuthProvider({ children }) {
-    const [usuario, setUsuario] = useState(null);
+    const [usuarios, setUsuarios] = useState(() => leerJson(CLAVE_USUARIOS, []));
+    const [usuario, setUsuario] = useState(() => leerJson(CLAVE_SESION, null));
+
+    const persistir = (lista, sesion) => {
+        setUsuarios(lista);
+        guardarUsuarios(lista);
+        setUsuario(sesion);
+        guardarSesion(sesion);
+    };
 
     const iniciarSesion = ({ correo, password }) => {
         if (!correo?.trim() || !password) {
             return { ok: false, mensaje: 'Por favor, ingrese sus datos' };
         }
-        const nombre = correo.split('@')[0];
-        setUsuario(crearUsuario({ nombre, correo }));
+        const hallado = usuarios.find((item) => item.correo === correo.trim().toLowerCase());
+        if (!hallado || hallado.password !== password) {
+            return { ok: false, mensaje: 'Correo o contraseña incorrectos' };
+        }
+        const sesion = sinPassword(hallado);
+        setUsuario(sesion);
+        guardarSesion(sesion);
         return { ok: true };
     };
 
@@ -40,13 +87,21 @@ export function AuthProvider({ children }) {
         if (!nombre?.trim() || !correo?.trim() || !password || !confirmar) {
             return { ok: false, mensaje: 'Completa todos los campos' };
         }
+        if (!correoValido(correo)) {
+            return { ok: false, mensaje: 'Ingresa un correo válido' };
+        }
         if (password.length < 6) {
             return { ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' };
         }
         if (password !== confirmar) {
             return { ok: false, mensaje: 'Las contraseñas no coinciden' };
         }
-        setUsuario(crearUsuario({ nombre, correo }));
+        const correoNormalizado = correo.trim().toLowerCase();
+        if (usuarios.some((item) => item.correo === correoNormalizado)) {
+            return { ok: false, mensaje: 'Ese correo ya tiene una cuenta' };
+        }
+        const nuevo = crearUsuario({ nombre, correo, password });
+        persistir([...usuarios, nuevo], sinPassword(nuevo));
         return { ok: true };
     };
 
@@ -54,32 +109,72 @@ export function AuthProvider({ children }) {
         if (!correo?.trim()) {
             return { ok: false, mensaje: 'Ingresa tu correo electrónico' };
         }
-        return {
-            ok: true,
-            mensaje: 'Si el correo está registrado, te enviaremos las instrucciones.',
-        };
+        if (!correoValido(correo)) {
+            return { ok: false, mensaje: 'Ingresa un correo válido' };
+        }
+        const existe = usuarios.some((item) => item.correo === correo.trim().toLowerCase());
+        if (!existe) {
+            return { ok: false, mensaje: 'No hay una cuenta con ese correo' };
+        }
+        return { ok: true };
+    };
+
+    const restablecerPassword = ({ correo, password, confirmar }) => {
+        if (!password || !confirmar) {
+            return { ok: false, mensaje: 'Completa la nueva contraseña' };
+        }
+        if (password.length < 6) {
+            return { ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' };
+        }
+        if (password !== confirmar) {
+            return { ok: false, mensaje: 'Las contraseñas no coinciden' };
+        }
+        const correoNormalizado = correo.trim().toLowerCase();
+        const indice = usuarios.findIndex((item) => item.correo === correoNormalizado);
+        if (indice === -1) {
+            return { ok: false, mensaje: 'No hay una cuenta con ese correo' };
+        }
+        const actualizado = { ...usuarios[indice], password };
+        const lista = usuarios.map((item, i) => (i === indice ? actualizado : item));
+        const sesionActiva = usuario?.id === actualizado.id ? sinPassword(actualizado) : usuario;
+        persistir(lista, sesionActiva);
+        return { ok: true };
     };
 
     const actualizarPerfil = ({ nombre, correo }) => {
         if (!nombre?.trim() || !correo?.trim()) {
             return { ok: false, mensaje: 'Nombre y correo son obligatorios' };
         }
-        setUsuario((prev) => {
-            if (!prev) {
-                return crearUsuario({ nombre, correo });
+        if (!correoValido(correo)) {
+            return { ok: false, mensaje: 'Ingresa un correo válido' };
+        }
+        if (!usuario) {
+            return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
+        }
+        const correoNormalizado = correo.trim().toLowerCase();
+        const ocupado = usuarios.some((item) => item.correo === correoNormalizado && item.id !== usuario.id);
+        if (ocupado) {
+            return { ok: false, mensaje: 'Ese correo ya está en uso' };
+        }
+        const lista = usuarios.map((item) => {
+            if (item.id !== usuario.id) {
+                return item;
             }
             return {
-                ...prev,
+                ...item,
                 nombre: nombre.trim(),
-                correo: correo.trim().toLowerCase(),
+                correo: correoNormalizado,
                 iniciales: obtenerIniciales(nombre),
             };
         });
+        const actualizado = lista.find((item) => item.id === usuario.id);
+        persistir(lista, sinPassword(actualizado));
         return { ok: true };
     };
 
     const cerrarSesion = () => {
         setUsuario(null);
+        guardarSesion(null);
     };
 
     return (
@@ -89,6 +184,7 @@ export function AuthProvider({ children }) {
                 iniciarSesion,
                 registrar,
                 solicitarRecuperacion,
+                restablecerPassword,
                 actualizarPerfil,
                 cerrarSesion,
             }}

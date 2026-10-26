@@ -1,6 +1,6 @@
-import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle } from '@ionic/react';
+import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle, useIonRouter } from '@ionic/react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import './login.css';
 import logo from './media/logo.svg';
@@ -9,7 +9,7 @@ function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [mostrarToast] = useIonToast();
-    const navigate = useNavigate();
+    const router = useIonRouter();
     const { iniciarSesion } = useAuth();
 
     const manejarLogin = (e) => {
@@ -24,7 +24,7 @@ function Login() {
             });
             return;
         }
-        navigate('/pages/Home');
+        router.push('/pages/Home', 'root', 'replace');
     };
 
     return (

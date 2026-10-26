@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     IonPage,
     IonHeader,
@@ -9,6 +8,7 @@ import {
     IonInput,
     IonButton,
     useIonToast,
+    useIonRouter,
 } from '@ionic/react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import './perfil.css';
@@ -29,7 +29,7 @@ function Perfil() {
     const [nombre, setNombre] = useState(usuario?.nombre ?? '');
     const [correo, setCorreo] = useState(usuario?.correo ?? '');
     const [mostrarToast] = useIonToast();
-    const navigate = useNavigate();
+    const router = useIonRouter();
 
     useEffect(() => {
         setNombre(usuario?.nombre ?? '');
@@ -49,7 +49,7 @@ function Perfil() {
 
     const manejarCerrarSesion = () => {
         cerrarSesion();
-        navigate('/');
+        router.push('/', 'root', 'replace');
     };
 
     if (!usuario) {
@@ -66,7 +66,7 @@ function Perfil() {
                 <IonContent className="ion-padding">
                     <div className="perfil-vacio">
                         <p>Inicia sesión para ver y editar tu perfil.</p>
-                        <IonButton className="login-button" expand="block" onClick={() => navigate('/')}>
+                        <IonButton className="login-button" expand="block" onClick={() => router.push('/', 'root', 'replace')}>
                             Ir a iniciar sesión
                         </IonButton>
                     </div>
