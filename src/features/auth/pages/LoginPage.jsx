@@ -18,8 +18,8 @@ function Login() {
         ? !email.trim()
             ? 'Ingresa tu correo electrónico.'
             : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-              ? 'Ingresa un correo electrónico válido.'
-              : ''
+            ? 'Ingresa un correo electrónico válido.'
+            : ''
         : '';
     const errorPassword = intentoEnviar && !password ? 'Ingresa tu contraseña.' : '';
 
