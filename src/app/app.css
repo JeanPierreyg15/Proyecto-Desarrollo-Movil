@@ -21,8 +21,8 @@
   --app-surface: #1c1c1e;
   --app-surface-soft: #2c2c2e;
   --app-border: #38383a;
-  --app-text: #f2f2f7;
-  --app-text-muted: #9ca3af;
+  --app-text: #ffffff;
+  --app-text-muted: #c7c7cc;
 }
 
 html, body, #root {
