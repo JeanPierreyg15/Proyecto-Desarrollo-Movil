@@ -6,6 +6,7 @@ import { AuthProvider } from '../features/auth/context/AuthContext.jsx';
 import LoginPage from '../features/auth/pages/LoginPage.jsx';
 import RegisterPage from '../features/auth/pages/RegisterPage.jsx';
 import PasswordRecoveryPage from '../features/auth/pages/PasswordRecoveryPage.jsx';
+import ChangePasswordPage from '../features/profile/pages/ChangePasswordPage.jsx';
 import Layout from './TabsLayout.jsx';
 
 const App = () => (
@@ -16,6 +17,7 @@ const App = () => (
                     <Route path="/" element={<LoginPage />} />
                     <Route path="/registro" element={<RegisterPage />} />
                     <Route path="/recuperar" element={<PasswordRecoveryPage />} />
+                    <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
                     <Route path="/pages/*" element={<Layout />} />
                 </IonRouterOutlet>
             </IonReactRouter>

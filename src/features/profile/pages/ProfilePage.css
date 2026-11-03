@@ -20,18 +20,19 @@
 }
 
 .perfil-content {
-    --padding-bottom: 32px;
+    --padding-bottom: 40px;
 }
 
 .perfil-page {
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 24px;
     width: 100%;
     max-width: 440px;
     margin: 0 auto;
 }
 
+/* Avatar */
 .perfil-avatar {
     display: flex;
     flex-direction: column;
@@ -69,7 +70,7 @@
     --padding-start: 0;
     --padding-end: 0;
     --border-radius: 50%;
-    --background: #ffffff;
+    --background: var(--app-surface);
     --color: #2563eb;
     --box-shadow: 0 2px 8px rgba(17, 24, 39, 0.16);
 }
@@ -80,17 +81,18 @@
 
 .perfil-avatar h2 {
     margin: 4px 0 0;
-    color: #111827;
+    color: var(--app-text);
     font-size: 20px;
     font-weight: 700;
 }
 
 .perfil-correo {
     margin: 0;
-    color: #6b7280;
+    color: var(--app-text-muted);
     font-size: 14px;
 }
 
+/* Estadísticas */
 .perfil-estadisticas {
     display: flex;
     justify-content: space-evenly;
@@ -104,13 +106,13 @@
     align-items: center;
     justify-content: center;
     min-height: 78px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--app-border);
     border-radius: 12px;
-    background: #ffffff;
+    background: var(--app-surface);
 }
 
 .estadistica strong {
-    color: #111827;
+    color: var(--app-text);
     font-size: 22px;
     font-weight: 700;
     line-height: 1.2;
@@ -118,34 +120,60 @@
 
 .estadistica span {
     margin-top: 4px;
-    color: #6b7280;
+    color: var(--app-text-muted);
     font-size: 12px;
 }
 
+/* Secciones en card */
+.perfil-seccion {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.perfil-seccion-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--app-text);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.perfil-seccion-titulo ion-icon {
+    font-size: 18px;
+    color: #2563eb;
+}
+
+/* Form */
 .perfil-form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
     width: 100%;
 }
 
 .perfil-campo {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
 }
 
 .perfil-campo label {
-    color: #6b7280;
+    color: var(--app-text-muted);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
 }
 
 .perfil-input {
-    --background: #ffffff;
-    --border-color: #e5e7eb;
+    --background: var(--app-surface);
+    --border-color: var(--app-border);
     --border-radius: 12px;
     --highlight-color-focused: #2563eb;
     --padding-start: 14px;
@@ -154,26 +182,60 @@
     font-size: 14px;
 }
 
-.perfil-bio-contenedor {
-    position: relative;
-}
-
 .perfil-bio {
     --padding-top: 12px;
     --padding-bottom: 12px;
-    --padding-end: 40px;
-    min-height: 100px;
+    min-height: 96px;
 }
 
-.perfil-bio-icono {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    color: #9ca3af;
+/* Filas (toggle / navegación) */
+.perfil-fila {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin: 0;
+    padding: 4px 0;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: var(--app-text);
+    font-size: 15px;
+}
+
+.perfil-fila--toggle {
+    cursor: default;
+}
+
+.perfil-fila-icono {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--app-surface-soft);
+    color: #2563eb;
     font-size: 18px;
-    pointer-events: none;
+    flex-shrink: 0;
 }
 
+.perfil-fila-texto {
+    flex: 1;
+    font-weight: 500;
+}
+
+.perfil-fila-chevron {
+    color: var(--app-text-muted);
+    font-size: 18px;
+}
+
+.perfil-fila--boton:active {
+    opacity: 0.6;
+}
+
+/* Botones */
 .perfil-guardar {
     margin-top: 2px;
     --border-radius: 12px;
@@ -182,14 +244,26 @@
     font-weight: 600;
 }
 
+/* Sección Cuenta */
+.perfil-seccion-cuenta .perfil-seccion-titulo ion-icon {
+    color: var(--app-text-muted);
+}
+
+.perfil-cuenta-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .perfil-cerrar-sesion {
-    margin: -12px 0;
-    --color: #4b5563;
-    font-size: 14px;
+    --border-color: var(--app-border);
+    --border-radius: 12px;
+    --color: var(--app-text);
+    min-height: 46px;
+    font-weight: 600;
 }
 
 .perfil-eliminar {
-    margin-top: 4px;
     --border-color: #fca5a5;
     --border-radius: 12px;
     --color: #ef4444;
@@ -197,6 +271,7 @@
     font-weight: 600;
 }
 
+/* Vacío */
 .perfil-vacio {
     display: flex;
     flex-direction: column;
@@ -208,5 +283,5 @@
 
 .perfil-vacio p {
     margin: 0;
-    color: #4b5563;
+    color: var(--app-text-muted);
 }

@@ -17,10 +17,14 @@ import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 
+import '@ionic/react/css/palettes/dark.class.css';
 
 import './app/app.css';
+import { initTema } from './app/theme.js';
 
 setupIonicReact();
+
+initTema();
 
 const container = document.getElementById('root');
 const root = createRoot(container);

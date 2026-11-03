@@ -1,5 +1,5 @@
 .tag-card{
-    background-color: white;
+    background-color: var(--app-surface);
     border-radius: 20px;
     padding: 16px;
     display: flex;
@@ -25,7 +25,7 @@
 }
 .tag-card p {
     margin: 0;
-    color: #666; 
+    color: var(--app-text-muted);
     font-family: system-ui;
 }
 
@@ -53,21 +53,21 @@
 }
 
 .ghost-card {
-    border: 2px dashed #d1d5db; 
+    border: 2px dashed var(--app-border);
     border-radius: 20px;
-    display: flex; 
-    justify-content: center; 
+    display: flex;
+    justify-content: center;
     align-items: center;
-    height: 140px; 
+    height: 140px;
     background-color: transparent;
 }
 
 .ghost-icon {
-    background-color: #f3f4f6; 
+    background-color: var(--app-surface-soft);
     border-radius: 20px;
-    width: 60px; 
+    width: 60px;
     height: 60px;
-    display: flex; 
+    display: flex;
     align-items: center;
     justify-content: center;
 }
