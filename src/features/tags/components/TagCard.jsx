@@ -2,7 +2,7 @@ import React from "react"
 
 const TagCard = ({titulo,imagen,cantidad,onClick}) =>{
     return(
-        <div className="tag-card" onClick={onClick}>
+        <div className="tag-card animar-entrada" onClick={onClick}>
                 <div className="icon-container">
                     <span>{imagen}</span>
                 </div>

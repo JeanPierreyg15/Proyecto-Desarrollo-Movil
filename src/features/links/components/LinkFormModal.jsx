@@ -1,6 +1,6 @@
-import { IonHeader, IonToolbar,IonModal,IonButton,IonContent,IonInput,IonLabel,IonItem, IonFooter} from "@ionic/react"
-import FilterButtons from "./filterButtons"
-import React,{ useState } from "react"
+import { IonModal, IonButton, IonContent, IonInput } from '@ionic/react';
+import FilterButtons from './FilterButtons.jsx';
+import { useState } from 'react';
 const Modal = ({isOpen, cerrarModal})=>{
 
     const [url,setUrl] = useState('')
