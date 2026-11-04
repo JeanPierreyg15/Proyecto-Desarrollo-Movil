@@ -231,12 +231,4 @@ Los servicios estan en `src/features/*/services/` y actualmente devuelven datos 
 | `actualizarAvatar(color)` | async function | Cambiar color del avatar |
 | `cerrarSesion()` | async function | Cerrar sesion |
 
-## Proximos pasos (backend)
 
-- [ ] Crear proyecto en Supabase
-- [ ] Configurar Auth de Supabase (reemplazar authService.js)
-- [ ] Crear tablas: usuarios, links, etiquetas, links_etiquetas
-- [ ] Crear buckets de Storage: `avatars` (publico) y `link-images` (privado)
-- [ ] Configurar Row Level Security (RLS) para que cada usuario vea solo sus datos
-- [ ] Reemplazar linkService.js y tagService.js con llamadas a Supabase
-- [ ] Conectar Storage para subir imagenes de links y avatares
