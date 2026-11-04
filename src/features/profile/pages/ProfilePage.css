@@ -92,6 +92,34 @@
     font-size: 14px;
 }
 
+/* Selector de color del avatar */
+.avatar-colores {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.avatar-color {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.avatar-color:active {
+    transform: scale(0.9);
+}
+
+.avatar-color--activo {
+    border-color: var(--app-surface);
+    box-shadow: 0 0 0 2px var(--app-text);
+}
+
 /* Estadísticas */
 .perfil-estadisticas {
     display: flex;
@@ -133,6 +161,18 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    animation: aparecer-subiendo 0.35s ease both;
+}
+
+.perfil-estadisticas {
+    animation: aparecer-subiendo 0.35s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .perfil-seccion,
+    .perfil-estadisticas {
+        animation: none;
+    }
 }
 
 .perfil-seccion-titulo {

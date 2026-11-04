@@ -5,6 +5,7 @@ const etiquetasDemostracion = [
 
 export const tagService = {
     async listar() {
+        await new Promise((resolve) => setTimeout(resolve, 600));
         return etiquetasDemostracion;
     },
 };

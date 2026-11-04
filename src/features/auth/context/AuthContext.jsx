@@ -48,6 +48,18 @@ export function AuthProvider({ children }) {
         return resultado;
     };
 
+    const actualizarAvatar = async (avatarColor) => {
+        if (!usuario) {
+            return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
+        }
+
+        const resultado = await authService.actualizarAvatar({ id: usuario.id, avatarColor });
+        if (resultado.ok) {
+            setUsuario(resultado.usuario);
+        }
+        return resultado;
+    };
+
     const cerrarSesion = async () => {
         await authService.cerrarSesion();
         setUsuario(null);
@@ -62,6 +74,7 @@ export function AuthProvider({ children }) {
                 solicitarRecuperacion,
                 restablecerPassword,
                 actualizarPerfil,
+                actualizarAvatar,
                 cerrarSesion,
             }}
         >

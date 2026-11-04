@@ -27,8 +27,10 @@ import { useAuth } from '../../auth/context/AuthContext.jsx';
 import { aplicarTema } from '../../../app/theme.js';
 import './ProfilePage.css';
 
+const COLORES_AVATAR = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0891b2', '#475569'];
+
 function Perfil() {
-    const { usuario, actualizarPerfil, cerrarSesion } = useAuth();
+    const { usuario, actualizarPerfil, actualizarAvatar, cerrarSesion } = useAuth();
     const [nombre, setNombre] = useState(usuario?.nombre ?? '');
     const [correo, setCorreo] = useState(usuario?.correo ?? '');
     const [bio, setBio] = useState('');
@@ -60,6 +62,8 @@ function Perfil() {
         setOscuro(valor);
         aplicarTema(valor);
     };
+
+    const colorAvatar = usuario?.avatarColor ?? '#2563eb';
 
     const manejarCerrarSesion = () => {
         presentarAlerta({
@@ -137,9 +141,13 @@ function Perfil() {
                 <div className="perfil-page">
 
                     {/* Avatar */}
-                    <section className="perfil-avatar" aria-label="Información del perfil">
+                    <section className="perfil-avatar animar-entrada" aria-label="Información del perfil">
                         <div className="avatar-container">
-                            <div className="avatar-grande" aria-label={`Iniciales de ${usuario.nombre}`}>
+                            <div
+                                className="avatar-grande"
+                                style={{ backgroundColor: colorAvatar }}
+                                aria-label={`Iniciales de ${usuario.nombre}`}
+                            >
                                 {usuario.iniciales}
                             </div>
                             <IonButton
@@ -153,6 +161,21 @@ function Perfil() {
                         </div>
                         <h2>{usuario.nombre}</h2>
                         <p className="perfil-correo">{usuario.correo}</p>
+
+                        <div className="avatar-colores" role="radiogroup" aria-label="Color del avatar">
+                            {COLORES_AVATAR.map((color) => (
+                                <button
+                                    key={color}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={color === colorAvatar}
+                                    aria-label={`Usar color ${color}`}
+                                    className={`avatar-color ${color === colorAvatar ? 'avatar-color--activo' : ''}`}
+                                    style={{ backgroundColor: color }}
+                                    onClick={() => actualizarAvatar(color)}
+                                />
+                            ))}
+                        </div>
                     </section>
 
                     {/* Estadísticas */}

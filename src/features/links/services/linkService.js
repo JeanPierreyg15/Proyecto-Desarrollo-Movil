@@ -35,6 +35,7 @@ const linksDemostracion = [
 
 export const linkService = {
     async listar() {
+        await new Promise((resolve) => setTimeout(resolve, 600));
         return linksDemostracion;
     },
 };

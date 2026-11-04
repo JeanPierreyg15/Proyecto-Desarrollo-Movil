@@ -66,6 +66,46 @@
     margin-top:24px;
 }
 
+/* Skeleton de carga */
+.link-skeleton{
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+}
+
+.link-skeleton-img{
+    width: 120px;
+    height: 120px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.link-skeleton-cuerpo{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 4px 0;
+}
+
+.link-skeleton-linea{
+    height: 12px;
+    width: 100%;
+}
+
+.link-skeleton-linea--titulo{
+    height: 16px;
+    width: 60%;
+}
+
+.link-skeleton-linea--corta{
+    width: 40%;
+}
+
 .cabecera{
     font-size: 14px;
     font-weight: bold;
