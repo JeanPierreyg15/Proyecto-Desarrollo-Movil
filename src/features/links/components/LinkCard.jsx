@@ -2,7 +2,7 @@ import {useState} from 'react'
 import './LinkCard.css'
 const LinkCard=({titulo,url,imagen,tiempo,etiquetas})=>{
     return(
-        <article className='card'>
+        <article className='card animar-entrada'>
             <img src={imagen}/>
             <header className='card-header'>
                 <div className='card-header-top'>

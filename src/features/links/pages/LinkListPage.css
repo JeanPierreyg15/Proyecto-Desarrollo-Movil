@@ -41,8 +41,8 @@
     border-radius:20px;
     border:none;
     padding:8px 16px;
-    background-color: #f3f4f6;
-    color: #4b5563;
+    background-color: var(--app-surface-soft);
+    color: var(--app-text-muted);
 }
 
 .categories::-webkit-scrollbar {
@@ -66,6 +66,46 @@
     margin-top:24px;
 }
 
+/* Skeleton de carga */
+.link-skeleton{
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+}
+
+.link-skeleton-img{
+    width: 120px;
+    height: 120px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.link-skeleton-cuerpo{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 4px 0;
+}
+
+.link-skeleton-linea{
+    height: 12px;
+    width: 100%;
+}
+
+.link-skeleton-linea--titulo{
+    height: 16px;
+    width: 60%;
+}
+
+.link-skeleton-linea--corta{
+    width: 40%;
+}
+
 .cabecera{
     font-size: 14px;
     font-weight: bold;
@@ -80,7 +120,7 @@
     margin-bottom: 12px;
 }
 .input-redondeado{
-    --background : rgba(245, 245, 245, 0.553);
+    --background : var(--app-surface-soft);
     --border-radius: 20px;
     --padding-start:16px;
     --padding-end:16px;
@@ -88,9 +128,9 @@
 }
 
 .ion-item p{
-    margin: 0 0 8px 4px; 
-    font-size: 12px; 
-    color: #444; 
+    margin: 0 0 8px 4px;
+    font-size: 12px;
+    color: var(--app-text-muted);
     font-weight: 500;
 }
 .ion-item{
@@ -121,8 +161,8 @@
 }
 
 .btn-cancelar{
-    background-color:#f3f4f6;
-    color:black;
+    background-color: var(--app-surface-soft);
+    color: var(--app-text);
 }
 
 .btn-guardar{
@@ -137,11 +177,11 @@
 
 .tarjeta-previa{
     display: flex;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--app-border);
     border-radius: 12px;
-    padding: 8px; 
-    align-items: center; 
-    gap: 12px; 
+    padding: 8px;
+    align-items: center;
+    gap: 12px;
     margin-top: 4px;
     margin-bottom: 4px;
 }
@@ -165,24 +205,24 @@
 }
 
 .previa-info p{
-    color: #6b7280; 
+    color: var(--app-text-muted);
     margin-top: 4px;
 }
 
 .searchBar {
     --border-radius: 20px;
-    --background: rgba(245, 245, 245, 0.553); 
-    --box-shadow: none; 
-    padding-left: 0; 
+    --background: var(--app-surface-soft);
+    --box-shadow: none;
+    padding-left: 0;
     padding-right: 0;
 
-    padding-top: 0; 
+    padding-top: 0;
     margin-top: -10px;
 }
 
 .footer{
-    margin-top: 16px; 
-    background-color: #ffffff;
+    margin-top: 16px;
+    background-color: var(--app-surface);
 }
 
 .contenedor-modal {
@@ -199,7 +239,7 @@
 }
 
 .previa-vacia p {
-    color: #9ca3af; 
+    color: var(--app-text-muted);
     font-size: 12px;
     text-align: center;
     margin: 0;

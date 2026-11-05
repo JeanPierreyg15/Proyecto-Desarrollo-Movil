@@ -21,6 +21,7 @@ function crearUsuario({ nombre, correo, password }) {
         correo: correo.trim().toLowerCase(),
         password,
         iniciales: obtenerIniciales(nombre),
+        avatarColor: '#2563eb',
         creadoEn: new Date().toISOString(),
     };
 }
@@ -135,6 +136,17 @@ export const authService = {
             correo: correoNormalizado,
             iniciales: obtenerIniciales(nombre),
         };
+        usuarios = usuarios.map((item) => (item.id === id ? actualizado : item));
+        return { ok: true, usuario: usuarioPublico(actualizado) };
+    },
+
+    async actualizarAvatar({ id, avatarColor }) {
+        const usuario = usuarios.find((item) => item.id === id);
+        if (!usuario) {
+            return { ok: false, mensaje: 'No se encontró la cuenta' };
+        }
+
+        const actualizado = { ...usuario, avatarColor };
         usuarios = usuarios.map((item) => (item.id === id ? actualizado : item));
         return { ok: true, usuario: usuarioPublico(actualizado) };
     },

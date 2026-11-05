@@ -51,16 +51,21 @@
 }
 
 .register-container a {
-    color: #2563eb;
+    color: #60a5fa;
     text-decoration: none;
     font-weight: 600;
 }
 
+.register-container p {
+    color: var(--app-text);
+}
+
 .custom-input {
-    --background: #f9fafb;
+    --background: var(--app-surface-soft);
     --padding-start: 15px;
     --padding-end: 5px;
-    --border-color: #e5e7eb;
+    --border-color: var(--app-border);
+    --color: var(--app-text);
     transition: all 0.2s ease-in-out;
     font-size: 14px;
     min-height: 48px;
@@ -77,19 +82,19 @@
     margin: 0;
     font-size: 20px;
     font-weight: bold;
-    color: #111827;
+    color: var(--app-text);
 }
 
 .image-container p {
     margin: 5px 0 0;
     font-size: 12px;
-    color: #4b5563;
+    color: var(--app-text-muted);
 }
 
 .recuperar-link {
     text-align: right;
     font-size: 14px;
-    color: #2563eb;
+    color: #60a5fa;
     text-decoration: none;
 }
 
@@ -108,7 +113,7 @@
 
 .auth-field-hint {
     margin: -10px 0 -4px;
-    color: #6b7280;
+    color: var(--app-text-muted);
     font-size: 12px;
     line-height: 1.4;
 }
@@ -119,10 +124,10 @@
     max-width: 360px;
     margin: 0 auto;
     padding: 12px 14px;
-    border: 1px solid #bfdbfe;
+    border: 1px solid var(--app-border);
     border-radius: 12px;
-    background: #eff6ff;
-    color: #1e3a8a;
+    background: var(--app-surface-soft);
+    color: var(--app-text);
     font-size: 13px;
     line-height: 1.45;
 }
