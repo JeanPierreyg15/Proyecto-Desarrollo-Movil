@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import './LinkListPage.css';
 import LinkCard from '../components/LinkCard.jsx';
 import LinkFormModal from '../components/LinkFormModal.jsx';
@@ -7,76 +8,124 @@ import {
     IonHeader,
     IonToolbar,
     IonContent,
-    IonAvatar,
     IonSearchbar,
     IonFab,
     IonFabButton,
     IonButton,
     IonIcon,
+    IonRefresher,
+    IonRefresherContent,
     useIonRouter,
     useIonToast,
     useIonAlert,
+    useIonActionSheet,
+    useIonViewWillEnter,
 } from '@ionic/react';
-import { linkOutline, searchOutline } from 'ionicons/icons';
+import { alertCircleOutline, linkOutline, refreshOutline, searchOutline } from 'ionicons/icons';
 import FilterButtons from '../components/FilterButtons.jsx';
 import { useAuth } from '../../auth/context/AuthContext.jsx';
 import { linkService } from '../services/linkService.js';
 import { tagService } from '../../tags/services/tagService.js';
+import { abrirEnlace, compartirEnlace, copiarEnlace } from '../../../app/enlaces.js';
 
 const Home = () => {
     const { usuario } = useAuth();
     const router = useIonRouter();
+    const location = useLocation();
     const [mostrarToast] = useIonToast();
     const [presentarAlerta] = useIonAlert();
+    const [presentarAcciones] = useIonActionSheet();
 
     const [links, setLinks] = useState([]);
     const [etiquetas, setEtiquetas] = useState([]);
     const [cargando, setCargando] = useState(true);
+    const [errorCarga, setErrorCarga] = useState(null);
     const [mostrarModal, setMostrarModal] = useState(false);
+    const [linkEditar, setLinkEditar] = useState(null);
     const [textoBusqueda, setTextoBusqueda] = useState('');
     const [categoriasActivas, setCategoriasActivas] = useState([]);
 
-    const cargarDatos = useCallback(async () => {
-        setCargando(true);
-        const [resultadoLinks, resultadoEtiquetas] = await Promise.allSettled([
-            linkService.listar(),
-            tagService.listar(),
-        ]);
+    const avisar = useCallback(
+        (mensaje, color = 'success') =>
+            mostrarToast({ message: mensaje, duration: 2200, color, position: 'bottom' }),
+        [mostrarToast]
+    );
 
-        if (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok) {
-            setLinks(resultadoLinks.value.datos);
-        } else {
-            const mensaje = resultadoLinks.status === 'fulfilled'
-                ? resultadoLinks.value.mensaje
-                : 'No se pudieron cargar tus enlaces.';
-            mostrarToast({
-                message: mensaje,
-                duration: 2500,
-                color: 'danger',
-                position: 'bottom',
-            });
-        }
+    const cargarDatos = useCallback(
+        async (silencioso = false) => {
+            if (!silencioso) {
+                setCargando(true);
+            }
+            const [resultadoLinks, resultadoEtiquetas] = await Promise.allSettled([
+                linkService.listar(),
+                tagService.listar(),
+            ]);
 
-        if (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok) {
-            setEtiquetas(resultadoEtiquetas.value.datos);
-        }
+            if (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok) {
+                setLinks(resultadoLinks.value.datos);
+                setErrorCarga(null);
+            } else {
+                const mensaje = resultadoLinks.status === 'fulfilled'
+                    ? resultadoLinks.value.mensaje
+                    : 'No se pudieron cargar tus enlaces.';
+                setErrorCarga(mensaje);
+                if (silencioso) {
+                    avisar(mensaje, 'danger');
+                }
+            }
 
-        setCargando(false);
-    }, [mostrarToast]);
+            if (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok) {
+                setEtiquetas(resultadoEtiquetas.value.datos);
+            }
 
-    useEffect(() => {
+            setCargando(false);
+        },
+        [avisar]
+    );
+
+    // Recarga al entrar a la pestaña: los datos no quedan obsoletos.
+    useIonViewWillEnter(() => {
         cargarDatos();
-    }, [cargarDatos]);
+    });
 
-    const manejarFiltro = (categoriaClic) => {
-        if (categoriaClic === 'Todos') {
+    // Permite llegar desde Etiquetas con /pages/Home?etiqueta=Nombre
+    useEffect(() => {
+        const etiqueta = new URLSearchParams(location.search).get('etiqueta');
+        if (etiqueta) {
+            setCategoriasActivas([etiqueta]);
+        }
+    }, [location.search]);
+
+    const manejarFiltro = (valor) => {
+        if (valor === null) {
             setCategoriasActivas([]);
             return;
         }
-        if (categoriasActivas.includes(categoriaClic)) {
-            setCategoriasActivas(categoriasActivas.filter((c) => c !== categoriaClic));
-        } else {
-            setCategoriasActivas([...categoriasActivas, categoriaClic]);
+        setCategoriasActivas((previas) =>
+            previas.includes(valor)
+                ? previas.filter((categoria) => categoria !== valor)
+                : [...previas, valor]
+        );
+    };
+
+    const manejarAbrir = async (link) => {
+        const abierto = await abrirEnlace(link.url);
+        if (!abierto) {
+            avisar('No se pudo abrir el enlace.', 'danger');
+        }
+    };
+
+    const manejarCopiar = async (link) => {
+        const copiado = await copiarEnlace(link.url);
+        avisar(copiado ? 'Enlace copiado al portapapeles.' : 'No se pudo copiar el enlace.', copiado ? 'success' : 'danger');
+    };
+
+    const manejarCompartir = async (link) => {
+        const resultado = await compartirEnlace(link.url, link.titulo);
+        if (resultado.ok) {
+            avisar(resultado.copiado ? 'Enlace copiado para compartir.' : 'Enlace compartido.');
+        } else if (!resultado.cancelado) {
+            avisar('No se pudo compartir el enlace.', 'danger');
         }
     };
 
@@ -92,42 +141,70 @@ const Home = () => {
                     handler: async () => {
                         const resultado = await linkService.eliminar(link.id);
                         if (!resultado.ok) {
-                            mostrarToast({
-                                message: resultado.mensaje,
-                                duration: 2500,
-                                color: 'danger',
-                                position: 'bottom',
-                            });
+                            avisar(resultado.mensaje, 'danger');
                             return;
                         }
                         setLinks((previos) => previos.filter((item) => item.id !== link.id));
-                        mostrarToast({
-                            message: 'Enlace eliminado.',
-                            duration: 2000,
-                            color: 'success',
-                            position: 'bottom',
-                        });
+                        avisar('Enlace eliminado.');
                     },
                 },
             ],
         });
     };
 
+    const abrirAcciones = (link) => {
+        presentarAcciones({
+            header: link.titulo,
+            subHeader: link.dominio,
+            buttons: [
+                { text: 'Abrir', handler: () => manejarAbrir(link) },
+                { text: 'Copiar enlace', handler: () => manejarCopiar(link) },
+                { text: 'Compartir', handler: () => manejarCompartir(link) },
+                { text: 'Editar', handler: () => abrirEditar(link) },
+                { text: 'Eliminar', role: 'destructive', handler: () => manejarEliminar(link) },
+                { text: 'Cancelar', role: 'cancel' },
+            ],
+        });
+    };
+
+    const abrirCrear = () => {
+        setLinkEditar(null);
+        setMostrarModal(true);
+    };
+
+    const abrirEditar = (link) => {
+        setLinkEditar(link);
+        setMostrarModal(true);
+    };
+
+    const cerrarModal = () => {
+        setMostrarModal(false);
+        setLinkEditar(null);
+    };
+
+    const texto = textoBusqueda.trim().toLowerCase();
     const tarjetasFiltradas = links.filter((link) => {
-        const coincideTexto = link.titulo.toLowerCase().includes(textoBusqueda.toLowerCase());
+        const coincideTexto =
+            !texto ||
+            [link.titulo, link.url, ...(link.etiquetas ?? [])].some((valor) =>
+                String(valor).toLowerCase().includes(texto)
+            );
         const coincideCategoria =
             categoriasActivas.length === 0 ||
-            categoriasActivas.some((cat) => link.etiquetas.includes(cat));
+            categoriasActivas.some((categoria) => (link.etiquetas ?? []).includes(categoria));
         return coincideTexto && coincideCategoria;
     });
 
     const limpiarFiltros = () => {
         setTextoBusqueda('');
         setCategoriasActivas([]);
+        if (location.search) {
+            router.push('/pages/Home', 'root', 'replace');
+        }
     };
 
     const hayFiltros = textoBusqueda.trim() !== '' || categoriasActivas.length > 0;
-    const opcionesFiltro = ['Todos', ...etiquetas.map((etq) => etq.nombre)];
+    const opcionesFiltro = etiquetas.map((etiqueta) => etiqueta.nombre);
 
     return (
         <IonPage>
@@ -137,22 +214,37 @@ const Home = () => {
                         <h1>Mi Baul</h1>
                         <p>{links.length} {links.length === 1 ? 'link guardado' : 'links guardados'}</p>
                     </div>
-                    <IonAvatar slot="end" className="avatar" style={{ backgroundColor: usuario?.avatarColor ?? '#2563eb' }} onClick={() => router.push('/pages/Perfil', 'forward', 'push')}>
+                    <button
+                        type="button"
+                        className="avatar"
+                        aria-label="Ir a mi perfil"
+                        style={{ backgroundColor: usuario?.avatarColor ?? '#2563eb' }}
+                        onClick={() => router.push('/pages/Perfil', 'forward', 'push')}
+                    >
                         <span>{usuario?.iniciales ?? '?'}</span>
-                    </IonAvatar>
+                    </button>
                 </IonToolbar>
             </IonHeader>
             <IonContent className="ion-padding">
+                <IonRefresher
+                    slot="fixed"
+                    onIonRefresh={async (evento) => {
+                        await cargarDatos(true);
+                        evento.detail.complete();
+                    }}
+                >
+                    <IonRefresherContent />
+                </IonRefresher>
                 <IonSearchbar
                     className="searchBar"
                     type="text"
-                    placeholder="Buscar en tu baúl..."
+                    placeholder="Buscar por título, URL o etiqueta..."
                     value={textoBusqueda}
                     onIonInput={(e) => setTextoBusqueda(e.detail.value ?? '')}
                     shape="round"
                     aria-label="Buscar links"
                 />
-                {etiquetas.length > 0 && (
+                {opcionesFiltro.length > 0 && (
                     <FilterButtons opciones={opcionesFiltro} activas={categoriasActivas} onToggle={manejarFiltro} />
                 )}
                 {cargando ? (
@@ -167,6 +259,18 @@ const Home = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                ) : errorCarga && links.length === 0 ? (
+                    <div className="estado-vacio estado-error">
+                        <div className="estado-vacio-icono">
+                            <IonIcon icon={alertCircleOutline} aria-hidden="true" />
+                        </div>
+                        <h3>No pudimos cargar tus links</h3>
+                        <p>{errorCarga}</p>
+                        <IonButton className="estado-vacio-boton" onClick={() => cargarDatos()}>
+                            <IonIcon slot="start" icon={refreshOutline} aria-hidden="true" />
+                            Reintentar
+                        </IonButton>
                     </div>
                 ) : tarjetasFiltradas.length === 0 ? (
                     <div className="estado-vacio">
@@ -183,7 +287,7 @@ const Home = () => {
                             <>
                                 <h3>Tu baúl está vacío</h3>
                                 <p>Empieza a guardar tus links favoritos para tenerlos siempre a mano.</p>
-                                <IonButton className="estado-vacio-boton" onClick={() => setMostrarModal(true)}>Guarda tu primer link</IonButton>
+                                <IonButton className="estado-vacio-boton" onClick={abrirCrear}>Guarda tu primer link</IonButton>
                             </>
                         )}
                     </div>
@@ -197,21 +301,23 @@ const Home = () => {
                                 imagen={link.imagen}
                                 tiempo={link.tiempo}
                                 etiquetas={link.etiquetas}
-                                onEliminar={() => manejarEliminar(link)}
+                                onAbrir={() => manejarAbrir(link)}
+                                onAcciones={() => abrirAcciones(link)}
                             />
                         ))}
                     </div>
                 )}
                 <IonFab vertical="bottom" horizontal="end" slot="fixed">
-                    <IonFabButton aria-label="Guardar nuevo link" onClick={() => setMostrarModal(true)}>
+                    <IonFabButton aria-label="Guardar nuevo link" onClick={abrirCrear}>
                         +
                     </IonFabButton>
                 </IonFab>
                 <LinkFormModal
                     isOpen={mostrarModal}
-                    cerrarModal={() => setMostrarModal(false)}
+                    cerrarModal={cerrarModal}
                     etiquetas={etiquetas}
-                    onGuardado={cargarDatos}
+                    link={linkEditar}
+                    onGuardado={() => cargarDatos(true)}
                 />
             </IonContent>
         </IonPage>

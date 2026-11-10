@@ -2,17 +2,18 @@ import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPassword
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { correoValido } from '../../../app/validaciones.js';
+import { correoValido, passwordValida, LONGITUD_MINIMA_PASSWORD } from '../../../app/validaciones.js';
 import logo from '../assets/logo.svg';
 import '../auth.css';
 import './PasswordRecoveryPage.css';
 
 function Recuperar() {
     const [correo, setCorreo] = useState('');
+    const [codigo, setCodigo] = useState('');
     const [password, setPassword] = useState('');
     const [confirmar, setConfirmar] = useState('');
     const [paso, setPaso] = useState('correo');
-    const [tokenRecuperacion, setTokenRecuperacion] = useState('');
+    const [mensajeEnvio, setMensajeEnvio] = useState('');
     const [intentoEnviar, setIntentoEnviar] = useState(false);
     const [procesando, setProcesando] = useState(false);
     const [mostrarToast] = useIonToast();
@@ -22,7 +23,7 @@ function Recuperar() {
     const mostrarError = (mensaje) => {
         mostrarToast({
             message: mensaje,
-            duration: 2000,
+            duration: 2500,
             color: 'danger',
             position: 'bottom',
         });
@@ -36,37 +37,43 @@ function Recuperar() {
         }
 
         setProcesando(true);
-        await new Promise((resolve) => window.requestAnimationFrame(resolve));
         const resultado = await solicitarRecuperacion({ correo });
+        setProcesando(false);
         if (!resultado.ok) {
             mostrarError(resultado.mensaje);
-            setProcesando(false);
             return;
         }
-        // El backend entrega el token de recuperación (en producción iría por correo)
-        setTokenRecuperacion(resultado.token);
-        setPaso('clave');
+
+        setMensajeEnvio(resultado.mensaje);
+        if (resultado.codigoDesarrollo) {
+            // Solo en desarrollo (DEBUG=true): el backend devuelve el código.
+            setCodigo(resultado.codigoDesarrollo);
+            mostrarToast({
+                message: 'Modo desarrollo: el código se rellenó automáticamente.',
+                duration: 2500,
+                color: 'medium',
+                position: 'bottom',
+            });
+        }
+        setPaso('codigo');
         setIntentoEnviar(false);
-        setProcesando(false);
     };
 
     const manejarClave = async (e) => {
         e.preventDefault();
         setIntentoEnviar(true);
-        if (password.length < 6 || !confirmar || password !== confirmar) {
+        if (!codigo.trim() || !passwordValida(password) || !confirmar || password !== confirmar) {
             return;
         }
 
         setProcesando(true);
-        await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const resultado = await restablecerPassword({ token: tokenRecuperacion, password });
+        const resultado = await restablecerPassword({ token: codigo, password });
+        setProcesando(false);
         if (!resultado.ok) {
             mostrarError(resultado.mensaje);
-            setProcesando(false);
             return;
         }
         setPaso('listo');
-        setProcesando(false);
     };
 
     const errorCorreo = intentoEnviar && paso === 'correo'
@@ -76,10 +83,13 @@ function Recuperar() {
               ? 'Ingresa un correo electrónico válido.'
               : ''
         : '';
-    const errorPassword = intentoEnviar && paso === 'clave' && password.length < 6
-        ? 'Usa al menos 6 caracteres.'
+    const errorCodigo = intentoEnviar && paso === 'codigo' && !codigo.trim()
+        ? 'Pega el código que recibiste.'
         : '';
-    const errorConfirmar = intentoEnviar && paso === 'clave'
+    const errorPassword = intentoEnviar && paso === 'codigo' && !passwordValida(password)
+        ? `Usa al menos ${LONGITUD_MINIMA_PASSWORD} caracteres.`
+        : '';
+    const errorConfirmar = intentoEnviar && paso === 'codigo'
         ? !confirmar
             ? 'Confirma tu contraseña.'
             : password !== confirmar
@@ -96,7 +106,7 @@ function Recuperar() {
                         <h1>Recuperar contraseña</h1>
                         <p>
                             {paso === 'correo' && 'Ingresa el correo de tu cuenta'}
-                            {paso === 'clave' && 'Elige una contraseña nueva'}
+                            {paso === 'codigo' && 'Revisa tu correo y pega el código recibido'}
                             {paso === 'listo' && 'Ya puedes iniciar sesión con tu nueva contraseña'}
                         </p>
                     </div>
@@ -119,15 +129,31 @@ function Recuperar() {
                             />
                             {errorCorreo && <p className="auth-field-error" id="recuperar-correo-error" role="alert">{errorCorreo}</p>}
                             <IonButton className="login-button" type="submit" expand="block" disabled={procesando}>
-                                {procesando ? 'Verificando...' : 'Continuar'}
+                                {procesando ? 'Enviando...' : 'Enviar código'}
                             </IonButton>
                             <Link to="/" className="auth-back">
                                 Volver a iniciar sesión
                             </Link>
                         </form>
                     )}
-                    {paso === 'clave' && (
+                    {paso === 'codigo' && (
                         <form onSubmit={manejarClave} className="login-form" noValidate aria-busy={procesando}>
+                            <p className="auth-field-hint" role="status">{mensajeEnvio}</p>
+                            <IonInput
+                                value={codigo}
+                                onIonInput={(e) => setCodigo(e.detail.value ?? '')}
+                                labelPlacement="floating"
+                                className="custom-input"
+                                type="text"
+                                label="Código de recuperación"
+                                fill="outline"
+                                shape="round"
+                                color="primary"
+                                autocomplete="one-time-code"
+                                aria-invalid={Boolean(errorCodigo)}
+                                aria-describedby={errorCodigo ? 'recuperar-codigo-error' : undefined}
+                            />
+                            {errorCodigo && <p className="auth-field-error" id="recuperar-codigo-error" role="alert">{errorCodigo}</p>}
                             <IonInput
                                 value={password}
                                 onIonInput={(e) => setPassword(e.detail.value ?? '')}
@@ -148,7 +174,9 @@ function Recuperar() {
                                     <IonInputPasswordToggle />
                                 </div>
                             </IonInput>
-                            <p className="auth-field-hint" id="recuperar-password-ayuda">Usa al menos 6 caracteres.</p>
+                            <p className="auth-field-hint" id="recuperar-password-ayuda">
+                                Usa al menos {LONGITUD_MINIMA_PASSWORD} caracteres.
+                            </p>
                             {errorPassword && <p className="auth-field-error" id="recuperar-password-error" role="alert">{errorPassword}</p>}
                             <IonInput
                                 value={confirmar}
@@ -172,9 +200,9 @@ function Recuperar() {
                             <IonButton className="login-button" type="submit" expand="block" disabled={procesando}>
                                 {procesando ? 'Actualizando...' : 'Guardar contraseña'}
                             </IonButton>
-                            <Link to="/" className="auth-back">
-                                Volver a iniciar sesión
-                            </Link>
+                            <button type="button" className="auth-back auth-back-boton" onClick={() => setPaso('correo')}>
+                                Usar otro correo
+                            </button>
                         </form>
                     )}
                     {paso === 'listo' && (

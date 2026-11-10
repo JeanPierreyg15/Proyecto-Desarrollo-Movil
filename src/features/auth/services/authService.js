@@ -3,27 +3,25 @@
 //   { ok: true, ... }              -> éxito
 //   { ok: false, mensaje }         -> fracaso controlado
 
-import { apiRequest, guardarToken, borrarToken, obtenerToken } from '../../../app/apiClient.js';
+import { apiRequest } from '../../../app/apiClient.js';
+import { borrarToken, guardarToken, obtenerToken } from '../../../app/almacenamiento.js';
 import { correoValido, passwordValida, obtenerIniciales } from '../../../app/validaciones.js';
 
-/** Convierte un usuario de la API ({id, email, nombre, avatar_color}) al formato de la app. */
+/** Convierte un usuario de la API ({id, email, nombre, avatar_color, bio}) al formato de la app. */
 export function mapearUsuario(usuarioApi) {
     return {
         id: usuarioApi.id,
         nombre: usuarioApi.nombre,
         correo: usuarioApi.email,
         avatarColor: usuarioApi.avatar_color ?? '#2563eb',
+        bio: usuarioApi.bio ?? '',
         iniciales: obtenerIniciales(usuarioApi.nombre),
     };
 }
 
-/** Solicita los datos del usuario autenticado (usando el token ya guardado). */
 async function usuarioAutenticado() {
     const resultado = await apiRequest('/auth/me');
-    if (!resultado.ok) {
-        return null;
-    }
-    return mapearUsuario(resultado.datos);
+    return resultado.ok ? mapearUsuario(resultado.datos) : null;
 }
 
 export const authService = {
@@ -44,10 +42,13 @@ export const authService = {
             return { ok: false, mensaje: resultado.mensaje };
         }
 
-        guardarToken(resultado.datos.access_token);
-        const usuario = await usuarioAutenticado();
+        // El backend devuelve el usuario junto al token (una sola petición)
+        await guardarToken(resultado.datos.access_token);
+        const usuario = resultado.datos.usuario
+            ? mapearUsuario(resultado.datos.usuario)
+            : await usuarioAutenticado();
         if (!usuario) {
-            borrarToken();
+            await borrarToken();
             return { ok: false, mensaje: 'No se pudo iniciar la sesión' };
         }
         return { ok: true, usuario };
@@ -61,7 +62,7 @@ export const authService = {
             return { ok: false, mensaje: 'Ingresa un correo válido' };
         }
         if (!passwordValida(password)) {
-            return { ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' };
+            return { ok: false, mensaje: 'La contraseña debe tener al menos 8 caracteres' };
         }
 
         const resultado = await apiRequest('/auth/register', {
@@ -97,37 +98,39 @@ export const authService = {
         if (!resultado.ok) {
             return { ok: false, mensaje: resultado.mensaje };
         }
-        return { ok: true, token: resultado.datos.reset_token };
+        // Mensaje genérico del backend. En modo DEBUG de desarrollo también llega
+        // el código (en producción se enviaría por email).
+        return {
+            ok: true,
+            mensaje: resultado.datos.mensaje,
+            codigoDesarrollo: resultado.datos.reset_token ?? null,
+        };
     },
 
     async restablecerPassword({ token, password }) {
-        if (!token) {
-            return { ok: false, mensaje: 'Solicitud de recuperación no válida, empieza de nuevo' };
+        if (!token?.trim()) {
+            return { ok: false, mensaje: 'Pega el código que recibiste en tu correo' };
         }
         if (!passwordValida(password)) {
-            return { ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' };
+            return { ok: false, mensaje: 'La contraseña debe tener al menos 8 caracteres' };
         }
 
         const resultado = await apiRequest('/auth/restablecer', {
             metodo: 'POST',
-            datos: { token, password },
+            datos: { token: token.trim(), password },
             autenticado: false,
         });
-        if (!resultado.ok) {
-            return { ok: false, mensaje: resultado.mensaje };
-        }
-        return { ok: true };
+        return resultado.ok ? { ok: true } : { ok: false, mensaje: resultado.mensaje };
     },
 
-    async actualizarPerfil({ nombre }) {
+    async actualizarPerfil({ nombre, bio }) {
         const resultado = await apiRequest('/auth/perfil', {
             metodo: 'PUT',
-            datos: { nombre },
+            datos: { nombre, bio },
         });
-        if (!resultado.ok) {
-            return { ok: false, mensaje: resultado.mensaje };
-        }
-        return { ok: true, usuario: mapearUsuario(resultado.datos) };
+        return resultado.ok
+            ? { ok: true, usuario: mapearUsuario(resultado.datos) }
+            : { ok: false, mensaje: resultado.mensaje };
     },
 
     async actualizarAvatar({ avatarColor }) {
@@ -135,40 +138,53 @@ export const authService = {
             metodo: 'PUT',
             datos: { avatar_color: avatarColor },
         });
-        if (!resultado.ok) {
-            return { ok: false, mensaje: resultado.mensaje };
-        }
-        return { ok: true, usuario: mapearUsuario(resultado.datos) };
+        return resultado.ok
+            ? { ok: true, usuario: mapearUsuario(resultado.datos) }
+            : { ok: false, mensaje: resultado.mensaje };
     },
 
-    async eliminarCuenta() {
-        const resultado = await apiRequest('/auth/cuenta', { metodo: 'DELETE' });
+    async cambiarPassword({ passwordActual, passwordNueva }) {
+        const resultado = await apiRequest('/auth/password', {
+            metodo: 'PUT',
+            datos: { password_actual: passwordActual, password_nueva: passwordNueva },
+        });
         if (!resultado.ok) {
             return { ok: false, mensaje: resultado.mensaje };
         }
-        borrarToken();
+        // La sesión anterior queda invalidada: guardamos el token nuevo
+        await guardarToken(resultado.datos.access_token);
+        return { ok: true, mensaje: 'Contraseña actualizada con éxito.' };
+    },
+
+    async eliminarCuenta(password) {
+        const resultado = await apiRequest('/auth/cuenta', {
+            metodo: 'DELETE',
+            datos: { password },
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        await borrarToken();
         return { ok: true };
     },
 
-    /** Restaura la sesión guardada (se llama al arrancar la app). */
+    /** Restaura la sesión guardada al arrancar la app. */
     async restaurarSesion() {
-        const token = obtenerToken();
+        const token = await obtenerToken();
         if (!token) {
             return null;
         }
-
         const usuario = await usuarioAutenticado();
         if (usuario) {
             return usuario;
         }
-
-        // Token inválido/expirado → se limpia la sesión
-        borrarToken();
+        // Si fue un 401, apiClient ya borró el token. Si fue un fallo de red,
+        // se conserva para poder reintentar en el próximo arranque.
         return null;
     },
 
     async cerrarSesion() {
-        borrarToken();
+        await borrarToken();
         return { ok: true };
     },
 };

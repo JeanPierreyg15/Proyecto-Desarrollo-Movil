@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     IonPage,
     IonHeader,
@@ -12,9 +12,9 @@ import {
     useIonToast,
     useIonRouter,
     useIonAlert,
+    useIonViewWillEnter,
 } from '@ionic/react';
 import {
-    createOutline,
     personOutline,
     lockClosedOutline,
     logOutOutline,
@@ -34,8 +34,7 @@ const COLORES_AVATAR = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '
 function Perfil() {
     const { usuario, actualizarPerfil, actualizarAvatar, eliminarCuenta, cerrarSesion } = useAuth();
     const [nombre, setNombre] = useState(usuario?.nombre ?? '');
-    const [correo, setCorreo] = useState(usuario?.correo ?? '');
-    const [bio, setBio] = useState('');
+    const [bio, setBio] = useState(usuario?.bio ?? '');
     const [oscuro, setOscuro] = useState(() =>
         document.documentElement.classList.contains('ion-palette-dark')
     );
@@ -44,44 +43,47 @@ function Perfil() {
     const [presentarAlerta] = useIonAlert();
     const router = useIonRouter();
 
-    // Estadísticas reales dentro de la sesión actual (antes eran números inventados)
     const [estadisticas, setEstadisticas] = useState({ links: 0, etiquetas: 0 });
-    useEffect(() => {
-        let activo = true;
-        Promise.allSettled([linkService.listar(), tagService.listar()]).then(
-            ([resultadoLinks, resultadoEtiquetas]) => {
-                if (!activo) {
-                    return;
-                }
-                setEstadisticas({
-                    links: (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok)
-                        ? resultadoLinks.value.datos.length
-                        : 0,
-                    etiquetas: (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok)
-                        ? resultadoEtiquetas.value.datos.length
-                        : 0,
-                });
-            }
-        );
-        return () => {
-            activo = false;
-        };
+
+    const avisar = useCallback(
+        (mensaje, color = 'success') =>
+            mostrarToast({ message: mensaje, duration: 2200, color, position: 'bottom' }),
+        [mostrarToast]
+    );
+
+    /** Estadísticas reales dentro de la sesión actual. Se recargan al entrar a la pestaña. */
+    const cargarEstadisticas = useCallback(async () => {
+        const [resultadoLinks, resultadoEtiquetas] = await Promise.allSettled([
+            linkService.listar(),
+            tagService.listar(),
+        ]);
+        setEstadisticas({
+            links: (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok)
+                ? resultadoLinks.value.datos.length
+                : 0,
+            etiquetas: (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok)
+                ? resultadoEtiquetas.value.datos.length
+                : 0,
+        });
     }, []);
+
+    useIonViewWillEnter(() => {
+        cargarEstadisticas();
+    });
 
     useEffect(() => {
         setNombre(usuario?.nombre ?? '');
-        setCorreo(usuario?.correo ?? '');
+        setBio(usuario?.bio ?? '');
     }, [usuario]);
 
     const manejarGuardar = async (e) => {
         e.preventDefault();
-        const resultado = await actualizarPerfil({ nombre });
-        mostrarToast({
-            message: resultado.ok ? 'Perfil actualizado' : resultado.mensaje,
-            duration: 2000,
-            color: resultado.ok ? 'success' : 'danger',
-            position: 'bottom',
-        });
+        if (!nombre.trim()) {
+            avisar('El nombre no puede estar vacío.', 'danger');
+            return;
+        }
+        const resultado = await actualizarPerfil({ nombre, bio });
+        avisar(resultado.ok ? 'Perfil actualizado.' : resultado.mensaje, resultado.ok ? 'success' : 'danger');
     };
 
     const cambiarTema = (valor) => {
@@ -90,6 +92,14 @@ function Perfil() {
     };
 
     const colorAvatar = usuario?.avatarColor ?? '#2563eb';
+
+    const manejarColorAvatar = async (color) => {
+        if (color === colorAvatar) {
+            return;
+        }
+        const resultado = await actualizarAvatar({ avatarColor: color });
+        avisar(resultado.ok ? 'Color del avatar actualizado.' : resultado.mensaje, resultado.ok ? 'success' : 'danger');
+    };
 
     const manejarCerrarSesion = () => {
         presentarAlerta({
@@ -109,26 +119,30 @@ function Perfil() {
         });
     };
 
-    const manejarEditarAvatar = () => {
-        mostrarToast({ message: 'La edición de foto estará disponible próximamente.', duration: 2000, color: 'medium', position: 'bottom' });
-    };
-
     const manejarEliminarCuenta = () => {
         presentarAlerta({
             header: 'Eliminar cuenta',
-            message: 'Esta acción es permanente y borrará tu cuenta, todos tus links y tus etiquetas. ¿Deseas continuar?',
+            message: 'Esta acción es permanente y borrará tu cuenta, todos tus links y tus etiquetas. Escribe tu contraseña para confirmar.',
+            inputs: [{ name: 'password', type: 'password', placeholder: 'Contraseña' }],
             buttons: [
                 { text: 'Cancelar', role: 'cancel' },
                 {
                     text: 'Eliminar',
                     role: 'destructive',
-                    handler: async () => {
-                        const resultado = await eliminarCuenta();
-                        if (!resultado.ok) {
-                            mostrarToast({ message: resultado.mensaje, duration: 2500, color: 'danger', position: 'bottom' });
-                            return;
+                    handler: async (datos) => {
+                        const password = datos?.password ?? '';
+                        if (!password) {
+                            avisar('Escribe tu contraseña para confirmar.', 'danger');
+                            return false;
                         }
+                        const resultado = await eliminarCuenta(password);
+                        if (!resultado.ok) {
+                            avisar(resultado.mensaje, 'danger');
+                            return false;
+                        }
+                        avisar('Tu cuenta fue eliminada.');
                         router.push('/', 'root', 'replace');
+                        return true;
                     },
                 },
             ],
@@ -181,14 +195,6 @@ function Perfil() {
                             >
                                 {usuario.iniciales}
                             </div>
-                            <IonButton
-                                className="avatar-edit"
-                                fill="solid"
-                                aria-label="Editar foto de perfil"
-                                onClick={manejarEditarAvatar}
-                            >
-                                <IonIcon icon={createOutline} aria-hidden="true" />
-                            </IonButton>
                         </div>
                         <h2>{usuario.nombre}</h2>
                         <p className="perfil-correo">{usuario.correo}</p>
@@ -203,7 +209,7 @@ function Perfil() {
                                     aria-label={`Usar color ${color}`}
                                     className={`avatar-color ${color === colorAvatar ? 'avatar-color--activo' : ''}`}
                                     style={{ backgroundColor: color }}
-                                    onClick={() => actualizarAvatar(color)}
+                                    onClick={() => manejarColorAvatar(color)}
                                 />
                             ))}
                         </div>
@@ -238,13 +244,14 @@ function Perfil() {
                                     type="text"
                                     placeholder="Juan Díaz"
                                     fill="outline"
+                                    maxlength={80}
                                 />
                             </div>
                             <div className="perfil-campo">
                                 <label htmlFor="perfil-correo">CORREO ELECTRÓNICO</label>
                                 <IonInput
                                     id="perfil-correo"
-                                    value={correo}
+                                    value={usuario.correo}
                                     disabled
                                     className="perfil-input"
                                     type="email"
@@ -263,6 +270,7 @@ function Perfil() {
                                     placeholder="Cuéntanos algo sobre ti..."
                                     fill="outline"
                                     rows={3}
+                                    maxlength={280}
                                 />
                             </div>
                             <IonButton className="perfil-guardar" type="submit" expand="block">

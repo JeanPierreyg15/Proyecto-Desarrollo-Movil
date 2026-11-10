@@ -1,32 +1,20 @@
 // Cliente HTTP central de la app.
-// Todas las peticiones a la API pasan por aquí: URL base, token y mensajes de error.
+// Todas las peticiones a la API pasan por aquí: URL base, token, timeout y
+// notificación global de sesión expirada.
 
+import { borrarToken, obtenerToken } from './almacenamiento.js';
+
+// En web (Vite) apunta a tu PC. En emulador Android, usa 10.0.2.2 en lugar de
+// localhost, y en un móvil físico la IP LAN de tu PC. Se configura en .env.
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 
-const CLAVE_TOKEN = 'locker-token';
+const TIEMPO_ESPERA_MS = 15000;
 
-export function obtenerToken() {
-    try {
-        return localStorage.getItem(CLAVE_TOKEN);
-    } catch {
-        return null;
-    }
-}
+let manejadorNoAutorizado = null;
 
-export function guardarToken(token) {
-    try {
-        localStorage.setItem(CLAVE_TOKEN, token);
-    } catch {
-        /* almacenamiento no disponible */
-    }
-}
-
-export function borrarToken() {
-    try {
-        localStorage.removeItem(CLAVE_TOKEN);
-    } catch {
-        /* almacenamiento no disponible */
-    }
+/** Registra una función (AuthContext) que se ejecutará cuando el token expire. */
+export function configurarNoAutorizado(handler) {
+    manejadorNoAutorizado = handler;
 }
 
 function extraerMensaje(cuerpo) {
@@ -37,7 +25,10 @@ function extraerMensaje(cuerpo) {
     // FastAPI devuelve errores de validación (422) como array
     if (Array.isArray(detalle)) {
         return detalle
-            .map((error) => `${(error.loc ?? []).slice(1).join('.')}: ${error.msg}`)
+            .map((error) => {
+                const campo = (error.loc ?? []).slice(1).join('.');
+                return campo ? `${campo}: ${error.msg}` : error.msg;
+            })
             .join(' · ');
     }
     return 'Ocurrió un error inesperado';
@@ -52,10 +43,15 @@ function extraerMensaje(cuerpo) {
 export async function apiRequest(ruta, { metodo = 'GET', datos = undefined, autenticado = true } = {}) {
     const cabeceras = { 'Content-Type': 'application/json' };
 
-    const token = obtenerToken();
-    if (autenticado && token) {
-        cabeceras.Authorization = `Bearer ${token}`;
+    if (autenticado) {
+        const token = await obtenerToken();
+        if (token) {
+            cabeceras.Authorization = `Bearer ${token}`;
+        }
     }
+
+    const control = new AbortController();
+    const temporizador = setTimeout(() => control.abort(), TIEMPO_ESPERA_MS);
 
     let respuesta;
     try {
@@ -63,9 +59,15 @@ export async function apiRequest(ruta, { metodo = 'GET', datos = undefined, aute
             method: metodo,
             headers: cabeceras,
             body: datos !== undefined ? JSON.stringify(datos) : undefined,
+            signal: control.signal,
         });
-    } catch {
-        return { ok: false, mensaje: 'No hay conexión con el servidor. Verifica que el backend esté corriendo.', estado: 0 };
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            return { ok: false, mensaje: 'El servidor tardó demasiado en responder. Inténtalo de nuevo.', estado: 0 };
+        }
+        return { ok: false, mensaje: 'No hay conexión con el servidor. Verifica tu red e inténtalo de nuevo.', estado: 0 };
+    } finally {
+        clearTimeout(temporizador);
     }
 
     if (respuesta.status === 204) {
@@ -81,8 +83,9 @@ export async function apiRequest(ruta, { metodo = 'GET', datos = undefined, aute
 
     if (!respuesta.ok) {
         if (respuesta.status === 401 && autenticado) {
-            // Token inválido o expirado: se limpia la sesión
-            borrarToken();
+            // Token inválido o expirado: se limpia la sesión y se avisa a la app
+            await borrarToken();
+            manejadorNoAutorizado?.();
         }
         return { ok: false, mensaje: extraerMensaje(cuerpo), estado: respuesta.status };
     }

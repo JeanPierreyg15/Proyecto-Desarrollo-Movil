@@ -1,11 +1,22 @@
 .tag-card{
     background-color: var(--app-surface);
+    border: none;
     border-radius: 20px;
     padding: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
+}
+
+.tag-card:focus-visible,
+.ghost-card:focus-visible{
+    outline: 3px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 2px;
 }
 
 .icon-container{
@@ -18,15 +29,18 @@
     border-radius: 20px;
     justify-content: center;
 }
-.tag-card h2 {
+.tag-card-titulo {
     margin: 12px 0 4px 0;
     font-size: 1.2rem;
     font-family: system-ui;
+    font-weight: 700;
+    color: var(--app-text);
 }
-.tag-card p {
+.tag-card-cantidad {
     margin: 0;
     color: var(--app-text-muted);
     font-family: system-ui;
+    font-size: 14px;
 }
 
 .header-info{
@@ -112,4 +126,84 @@
 
 .tag-skeleton-linea--corta{
     width: 45%;
+}
+
+/* Editor de etiqueta (modal) */
+.tag-editor{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tag-editor h2{
+    margin: 8px 0 0;
+    font-size: 20px;
+}
+
+.tag-editor-input{
+    --background: var(--app-surface);
+    --border-color: var(--app-border);
+    --border-radius: 12px;
+    --padding-start: 14px;
+    --padding-end: 14px;
+    min-height: 48px;
+}
+
+.tag-editor-label{
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.icono-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 8px;
+}
+
+.icono-opcion{
+    height: 48px;
+    border: 2px solid var(--app-border);
+    border-radius: 12px;
+    background-color: var(--app-surface);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.icono-opcion.activo{
+    border-color: #2563eb;
+    background-color: rgba(37, 99, 235, 0.12);
+}
+
+.tag-editor-acciones{
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.tag-editor-acciones button{
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tag-editor-cancelar{
+    background-color: var(--app-surface-soft);
+    color: var(--app-text);
+}
+
+.tag-editor-guardar{
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.tag-editor-guardar:disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
 }

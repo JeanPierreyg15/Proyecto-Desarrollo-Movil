@@ -1,54 +1,64 @@
 import { IonModal, IonContent, IonInput, useIonToast } from '@ionic/react';
+import { useEffect, useState } from 'react';
 import FilterButtons from './FilterButtons.jsx';
-import { useState } from 'react';
 import { linkService } from '../services/linkService.js';
+import { dominioDeUrl, faviconDeUrl, normalizarUrl } from '../../../app/validaciones.js';
 
-/** Extrae el dominio de una URL (mala incluida) para mostrarlo en la previsualización. */
-function hostDeUrl(valor = '') {
-    const completa = valor.trim().startsWith('http') ? valor.trim() : `https://${valor.trim()}`;
-    try {
-        return new URL(completa).hostname;
-    } catch {
-        return valor.trim();
-    }
-}
-
-const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado }) => {
+const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null }) => {
     const [url, setUrl] = useState('');
     const [titulo, setTitulo] = useState('');
     const [etiquetasSeleccionadas, setEtiquetasSeleccionadas] = useState([]);
     const [guardando, setGuardando] = useState(false);
     const [mostrarToast] = useIonToast();
 
-    const manejarSeleccion = (etiquetaClic) => {
-        if (etiquetasSeleccionadas.includes(etiquetaClic)) {
-            setEtiquetasSeleccionadas(etiquetasSeleccionadas.filter((e) => e !== etiquetaClic));
-        } else {
-            setEtiquetasSeleccionadas([...etiquetasSeleccionadas, etiquetaClic]);
+    const editando = Boolean(link);
+
+    // Al abrir el modal se cargan los datos del link (edición) o se limpia (creación).
+    useEffect(() => {
+        if (!isOpen) {
+            return;
         }
+        if (link) {
+            setUrl(link.url ?? '');
+            setTitulo(link.titulo ?? '');
+            setEtiquetasSeleccionadas(link.etiquetas ?? []);
+        } else {
+            setUrl('');
+            setTitulo('');
+            setEtiquetasSeleccionadas([]);
+        }
+        setGuardando(false);
+    }, [isOpen, link]);
+
+    const manejarSeleccion = (etiquetaClic) => {
+        if (etiquetaClic === null) {
+            setEtiquetasSeleccionadas([]);
+            return;
+        }
+        setEtiquetasSeleccionadas((previas) =>
+            previas.includes(etiquetaClic)
+                ? previas.filter((nombre) => nombre !== etiquetaClic)
+                : [...previas, etiquetaClic]
+        );
     };
 
-    const limpiarYCerrar = () => {
-        setUrl('');
-        setTitulo('');
-        setEtiquetasSeleccionadas([]);
-        cerrarModal();
+    const cerrar = () => {
+        cerrarModal?.();
     };
 
     const manejarGuardar = async () => {
         if (guardando) {
             return;
         }
-        setGuardando(true);
         const tagIds = etiquetasSeleccionadas
             .map((nombre) => etiquetas.find((etq) => etq.nombre === nombre)?.id)
             .filter(Boolean);
 
-        const resultado = await linkService.crear({
-            titulo: titulo.trim(),
-            url: url.trim(),
-            tagIds,
-        });
+        setGuardando(true);
+        const datos = { titulo, url, tagIds };
+        const resultado = editando
+            ? await linkService.actualizar(link.id, datos)
+            : await linkService.crear(datos);
         setGuardando(false);
 
         if (!resultado.ok) {
@@ -62,47 +72,79 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado }) => {
         }
 
         mostrarToast({
-            message: 'Link guardado con éxito.',
+            message: editando ? 'Enlace actualizado.' : 'Link guardado con éxito.',
             duration: 2000,
             color: 'success',
             position: 'bottom',
         });
         onGuardado?.(resultado.datos);
-        limpiarYCerrar();
+        cerrar();
     };
+
+    const urlNormalizada = normalizarUrl(url);
+    const host = urlNormalizada ? dominioDeUrl(urlNormalizada) : '';
+    const favicon = urlNormalizada ? faviconDeUrl(urlNormalizada) : null;
 
     return (
         <IonModal
             isOpen={isOpen}
-            onDidDismiss={limpiarYCerrar}
-            initialBreakpoint={0.75}
-            breakpoints={[0, 0.75, 1]}
+            onDidDismiss={cerrar}
+            initialBreakpoint={0.85}
+            breakpoints={[0, 0.85, 1]}
         >
             <IonContent className="ion-padding">
                 <div className="contenedor-modal">
                     <div>
                         <div className="cabecera">
-                            <p>Guarda un nuevo enlace</p>
+                            <p>{editando ? 'Edita el enlace' : 'Guarda un nuevo enlace'}</p>
                         </div>
                         <div className="ion-item">
                             <p>URL del enlace</p>
-                            <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value)} className="input-redondeado" placeholder="https://..." type="url" />
+                            <IonInput
+                                value={url}
+                                onIonInput={(e) => setUrl(e.detail.value ?? '')}
+                                className="input-redondeado"
+                                placeholder="https://..."
+                                type="url"
+                                inputmode="url"
+                                autocomplete="url"
+                            />
                         </div>
                         <div className="ion-item">
                             <p>Título</p>
-                            <IonInput value={titulo} onIonInput={(e) => setTitulo(e.detail.value)} className="input-redondeado" placeholder="Ej: Mi portafolio" type="text" />
+                            <IonInput
+                                value={titulo}
+                                onIonInput={(e) => setTitulo(e.detail.value ?? '')}
+                                className="input-redondeado"
+                                placeholder="Ej: Mi portafolio"
+                                type="text"
+                                maxlength={200}
+                            />
                         </div>
-                        {url.trim().length > 0 ? (
+                        {urlNormalizada ? (
                             <div className="tarjeta-previa">
-                                <div className="previa-img" />
+                                {favicon ? (
+                                    <img
+                                        className="previa-img"
+                                        src={favicon}
+                                        alt=""
+                                        width="60"
+                                        height="60"
+                                        onError={(evento) => {
+                                            evento.currentTarget.style.visibility = 'hidden';
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="previa-img" aria-hidden="true" />
+                                )}
                                 <div className="previa-info">
                                     <h4>{titulo.trim() || 'Sin título'}</h4>
-                                    <p>{hostDeUrl(url)}</p>
+                                    <p>{host}</p>
                                 </div>
                             </div>
                         ) : (
                             <div className="previa-vacia">
-                                <p>Ingresa una URL para generar la previsualización</p>
+                                <p>Ingresa una URL válida para generar la previsualización</p>
                             </div>
                         )}
                         <div className="grilla-etiquetas">
@@ -111,6 +153,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado }) => {
                                     opciones={etiquetas.map((etq) => etq.nombre)}
                                     activas={etiquetasSeleccionadas}
                                     onToggle={manejarSeleccion}
+                                    mostrarTodos={false}
                                 />
                             ) : (
                                 <p className="sin-etiquetas">Aún no tienes etiquetas. Crea una en la pestaña de Etiquetas.</p>
@@ -119,7 +162,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado }) => {
                     </div>
                     <div className="footer">
                         <div className="modal-footer">
-                            <button type="button" className="btn-cancelar" onClick={limpiarYCerrar}>
+                            <button type="button" className="btn-cancelar" onClick={cerrar}>
                                 Cancelar
                             </button>
                             <button
@@ -128,7 +171,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado }) => {
                                 disabled={guardando || url.trim() === '' || titulo.trim() === ''}
                                 onClick={manejarGuardar}
                             >
-                                {guardando ? 'Guardando...' : 'Guardar'}
+                                {guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Guardar'}
                             </button>
                         </div>
                     </div>

@@ -22,12 +22,21 @@
     display:flex;
     justify-content:center;
     align-items:center;
-    border-radius:20px; 
+    border-radius:20px;
+    border:none;
     width:40px;
     height:40px;
     background-color:blue;
     color:white;
     cursor:pointer;
+    font-size:15px;
+    font-weight:700;
+    flex-shrink:0;
+}
+
+.avatar:focus-visible{
+    outline: 3px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 2px;
 }
 
 .categories{
@@ -190,7 +199,15 @@
     width: 60px;
     height: 60px;
     border-radius: 8px;
-    background-color: #d1d5db;
+    background-color: var(--app-surface-soft);
+    object-fit: contain;
+    padding: 8px;
+    flex-shrink: 0;
+}
+
+.estado-error .estado-vacio-icono{
+    color: #dc2626;
+    background-color: rgba(220, 38, 38, 0.12);
 }
 
 .previa-info{

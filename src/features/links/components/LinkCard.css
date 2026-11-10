@@ -5,6 +5,12 @@
     padding:10px;
     border: 1px solid var(--app-border);
     border-radius: 12px;
+    cursor: pointer;
+}
+
+.card:focus-visible{
+    outline: 3px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 2px;
 }
 
 .card-header{
@@ -32,7 +38,10 @@
     width:120px ;
     height:120px ;
     border-radius:4px ;
-    object-fit:cover;
+    object-fit:contain;
+    padding: 14px;
+    background-color: var(--app-surface-soft);
+    flex-shrink: 0;
 }
 
 .card-header-top button{
@@ -60,18 +69,21 @@
     font-size: 14px;
 }
 
-.card-footer button{
+.card-tag{
     border-radius:20px;
     border:none;
-    padding:8px 16px;
+    padding:6px 12px;
     background-color: var(--app-surface-soft);
     color: var(--app-text-muted);
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .card-header-info strong { font-size: 16px; }
-.card-header-info span { font-size: 14px; color: var(--app-text-muted); }
+.card-header-info span { font-size: 14px; color: var(--app-text-muted); word-break: break-all; }
 
 .tags-container{
-    display: flex; 
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }

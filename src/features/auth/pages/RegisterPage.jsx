@@ -2,7 +2,7 @@ import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPassword
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { correoValido, passwordValida } from '../../../app/validaciones.js';
+import { correoValido, passwordValida, LONGITUD_MINIMA_PASSWORD } from '../../../app/validaciones.js';
 import logo from '../assets/logo.svg';
 import '../auth.css';
 
@@ -21,12 +21,12 @@ function Registro() {
     const errorCorreo = intentoEnviar
         ? !correo.trim()
             ? 'Ingresa tu correo electrónico.'
-            : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())
+            : !correoValido(correo)
               ? 'Ingresa un correo electrónico válido.'
               : ''
         : '';
     const errorPassword = intentoEnviar && !passwordValida(password)
-        ? 'Usa al menos 6 caracteres.'
+        ? `Usa al menos ${LONGITUD_MINIMA_PASSWORD} caracteres.`
         : '';
     const errorConfirmar = intentoEnviar
         ? !confirmar
@@ -40,13 +40,13 @@ function Registro() {
         e.preventDefault();
         setIntentoEnviar(true);
         const correoInvalido = !correo.trim() || !correoValido(correo);
-        if (!nombre.trim() || correoInvalido || password.length < 6 || !confirmar || password !== confirmar) {
+        if (!nombre.trim() || correoInvalido || !passwordValida(password) || !confirmar || password !== confirmar) {
             return;
         }
 
         setProcesando(true);
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const resultado = await registrar({ nombre, correo, password, confirmar });
+        const resultado = await registrar({ nombre, correo, password });
         if (!resultado.ok) {
             mostrarToast({
                 message: resultado.mensaje,
@@ -121,7 +121,7 @@ function Registro() {
                                 <IonInputPasswordToggle />
                             </div>
                         </IonInput>
-                        <p className="auth-field-hint" id="registro-password-ayuda">La contraseña debe tener al menos 6 caracteres.</p>
+                        <p className="auth-field-hint" id="registro-password-ayuda">La contraseña debe tener al menos {LONGITUD_MINIMA_PASSWORD} caracteres.</p>
                         {errorPassword && <p className="auth-field-error" id="registro-password-error" role="alert">{errorPassword}</p>}
                         <IonInput
                             value={confirmar}

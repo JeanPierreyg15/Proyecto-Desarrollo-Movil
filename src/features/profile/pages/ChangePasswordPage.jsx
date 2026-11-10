@@ -11,8 +11,11 @@ import {
     IonButton,
     IonIcon,
     useIonToast,
+    useIonRouter,
 } from '@ionic/react';
 import { lockClosedOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
+import { useAuth } from '../../auth/context/AuthContext.jsx';
+import { LONGITUD_MINIMA_PASSWORD, passwordValida } from '../../../app/validaciones.js';
 import './ChangePasswordPage.css';
 
 function CambiarContrasena() {
@@ -22,26 +25,63 @@ function CambiarContrasena() {
     const [mostrarPasswordActual, setMostrarPasswordActual] = useState(false);
     const [mostrarNuevaPassword, setMostrarNuevaPassword] = useState(false);
     const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
+    const [intentoEnviar, setIntentoEnviar] = useState(false);
+    const [procesando, setProcesando] = useState(false);
     const [mostrarToast] = useIonToast();
+    const router = useIonRouter();
+    const { cambiarPassword } = useAuth();
 
-    const manejarCambiarPassword = (e) => {
+    const errorActual = intentoEnviar && !passwordActual ? 'Ingresa tu contraseña actual.' : '';
+    const errorNueva = intentoEnviar && !passwordValida(nuevaPassword)
+        ? `Usa al menos ${LONGITUD_MINIMA_PASSWORD} caracteres.`
+        : intentoEnviar && nuevaPassword === passwordActual
+          ? 'La nueva contraseña debe ser diferente a la actual.'
+          : '';
+    const errorConfirmar = intentoEnviar
+        ? !confirmarPassword
+            ? 'Confirma tu nueva contraseña.'
+            : nuevaPassword !== confirmarPassword
+              ? 'Las contraseñas nuevas no coinciden.'
+              : ''
+        : '';
+
+    const manejarCambiarPassword = async (e) => {
         e.preventDefault();
-        if (!passwordActual || !nuevaPassword || !confirmarPassword) {
-            mostrarToast({ message: 'Completa todos los campos de contraseña.', duration: 2000, color: 'warning', position: 'bottom' });
+        setIntentoEnviar(true);
+        if (
+            !passwordActual ||
+            !passwordValida(nuevaPassword) ||
+            !confirmarPassword ||
+            nuevaPassword !== confirmarPassword ||
+            nuevaPassword === passwordActual
+        ) {
             return;
         }
-        if (nuevaPassword !== confirmarPassword) {
-            mostrarToast({ message: 'Las contraseñas nuevas no coinciden.', duration: 2000, color: 'danger', position: 'bottom' });
+
+        setProcesando(true);
+        const resultado = await cambiarPassword({ passwordActual, passwordNueva: nuevaPassword });
+        setProcesando(false);
+
+        if (!resultado.ok) {
+            mostrarToast({
+                message: resultado.mensaje,
+                duration: 2500,
+                color: 'danger',
+                position: 'bottom',
+            });
             return;
         }
-        if (nuevaPassword.length < 8) {
-            mostrarToast({ message: 'La contraseña debe tener al menos 8 caracteres.', duration: 2000, color: 'warning', position: 'bottom' });
-            return;
-        }
-        mostrarToast({ message: 'El cambio de contraseña estará disponible próximamente.', duration: 2500, color: 'medium', position: 'bottom' });
+
         setPasswordActual('');
         setNuevaPassword('');
         setConfirmarPassword('');
+        mostrarToast({
+            message: 'Contraseña actualizada con éxito.',
+            duration: 2000,
+            color: 'success',
+            position: 'bottom',
+        });
+        router.back();
     };
 
     return (
@@ -60,10 +100,10 @@ function CambiarContrasena() {
                         <div className="cambiar-icono">
                             <IonIcon icon={lockClosedOutline} aria-hidden="true" />
                         </div>
-                        <p>Protege tu cuenta con una contraseña segura de al menos 8 caracteres.</p>
+                        <p>Protege tu cuenta con una contraseña segura de al menos {LONGITUD_MINIMA_PASSWORD} caracteres.</p>
                     </div>
 
-                    <form onSubmit={manejarCambiarPassword} className="cambiar-form">
+                    <form onSubmit={manejarCambiarPassword} className="cambiar-form" noValidate aria-busy={procesando}>
                         <div className="cambiar-campo">
                             <label htmlFor="cambiar-actual">CONTRASEÑA ACTUAL</label>
                             <div className="cambiar-input-password">
@@ -75,6 +115,9 @@ function CambiarContrasena() {
                                     type={mostrarPasswordActual ? 'text' : 'password'}
                                     placeholder="Tu contraseña actual"
                                     fill="outline"
+                                    autocomplete="current-password"
+                                    aria-invalid={Boolean(errorActual)}
+                                    aria-describedby={errorActual ? 'cambiar-actual-error' : undefined}
                                 />
                                 <button
                                     type="button"
@@ -85,6 +128,7 @@ function CambiarContrasena() {
                                     <IonIcon icon={mostrarPasswordActual ? eyeOffOutline : eyeOutline} />
                                 </button>
                             </div>
+                            {errorActual && <p className="auth-field-error" id="cambiar-actual-error" role="alert">{errorActual}</p>}
                         </div>
                         <div className="cambiar-campo">
                             <label htmlFor="cambiar-nueva">NUEVA CONTRASEÑA</label>
@@ -95,8 +139,11 @@ function CambiarContrasena() {
                                     onIonInput={(e) => setNuevaPassword(e.detail.value ?? '')}
                                     className="cambiar-input"
                                     type={mostrarNuevaPassword ? 'text' : 'password'}
-                                    placeholder="Mínimo 8 caracteres"
+                                    placeholder={`Mínimo ${LONGITUD_MINIMA_PASSWORD} caracteres`}
                                     fill="outline"
+                                    autocomplete="new-password"
+                                    aria-invalid={Boolean(errorNueva)}
+                                    aria-describedby={errorNueva ? 'cambiar-nueva-error' : undefined}
                                 />
                                 <button
                                     type="button"
@@ -107,6 +154,7 @@ function CambiarContrasena() {
                                     <IonIcon icon={mostrarNuevaPassword ? eyeOffOutline : eyeOutline} />
                                 </button>
                             </div>
+                            {errorNueva && <p className="auth-field-error" id="cambiar-nueva-error" role="alert">{errorNueva}</p>}
                         </div>
                         <div className="cambiar-campo">
                             <label htmlFor="cambiar-confirmar">CONFIRMAR NUEVA CONTRASEÑA</label>
@@ -119,6 +167,9 @@ function CambiarContrasena() {
                                     type={mostrarConfirmar ? 'text' : 'password'}
                                     placeholder="Repite la nueva contraseña"
                                     fill="outline"
+                                    autocomplete="new-password"
+                                    aria-invalid={Boolean(errorConfirmar)}
+                                    aria-describedby={errorConfirmar ? 'cambiar-confirmar-error' : undefined}
                                 />
                                 <button
                                     type="button"
@@ -129,10 +180,11 @@ function CambiarContrasena() {
                                     <IonIcon icon={mostrarConfirmar ? eyeOffOutline : eyeOutline} />
                                 </button>
                             </div>
+                            {errorConfirmar && <p className="auth-field-error" id="cambiar-confirmar-error" role="alert">{errorConfirmar}</p>}
                         </div>
 
-                        <IonButton className="cambiar-guardar" type="submit" expand="block">
-                            Cambiar contraseña
+                        <IonButton className="cambiar-guardar" type="submit" expand="block" disabled={procesando}>
+                            {procesando ? 'Actualizando...' : 'Cambiar contraseña'}
                         </IonButton>
                     </form>
                 </div>

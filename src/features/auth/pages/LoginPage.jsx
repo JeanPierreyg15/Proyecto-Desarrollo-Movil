@@ -60,7 +60,7 @@ function Login() {
                     <form onSubmit={manejarLogin} className="login-form" noValidate aria-busy={procesando}>
                         <IonInput
                             value={email}
-                            onIonInput={(e) => setEmail(e.detail.value)}
+                            onIonInput={(e) => setEmail(e.detail.value ?? '')}
                             labelPlacement="floating"
                             className="custom-input"
                             type="email"
@@ -76,7 +76,7 @@ function Login() {
                         {errorCorreo && <p className="auth-field-error" id="login-correo-error" role="alert">{errorCorreo}</p>}
                         <IonInput
                             value={password}
-                            onIonInput={(e) => setPassword(e.detail.value)}
+                            onIonInput={(e) => setPassword(e.detail.value ?? '')}
                             labelPlacement="floating"
                             className="custom-input"
                             type="password"

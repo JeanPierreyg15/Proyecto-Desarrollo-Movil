@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { configurarNoAutorizado } from '../../../app/apiClient.js';
 import { authService } from '../services/authService.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    // La sesión se restaura del almacenamiento local (token) al arrancar.
+    // La sesión se restaura del almacenamiento (token) al arrancar.
     const [usuario, setUsuario] = useState(null);
     const [cargandoSesion, setCargandoSesion] = useState(true);
 
@@ -20,6 +21,12 @@ export function AuthProvider({ children }) {
         return () => {
             activo = false;
         };
+    }, []);
+
+    // Cuando cualquier petición recibe 401, se cierra la sesión en React y la
+    // ruta protegida redirige sola al login.
+    useEffect(() => {
+        configurarNoAutorizado(() => setUsuario(null));
     }, []);
 
     const iniciarSesion = useCallback(async (credenciales) => {
@@ -42,11 +49,11 @@ export function AuthProvider({ children }) {
 
     const restablecerPassword = useCallback((datos) => authService.restablecerPassword(datos), []);
 
-    const actualizarPerfil = useCallback(async ({ nombre }) => {
+    const actualizarPerfil = useCallback(async ({ nombre, bio }) => {
         if (!usuario) {
             return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
         }
-        const resultado = await authService.actualizarPerfil({ nombre });
+        const resultado = await authService.actualizarPerfil({ nombre, bio });
         if (resultado.ok) {
             setUsuario(resultado.usuario);
         }
@@ -64,8 +71,12 @@ export function AuthProvider({ children }) {
         return resultado;
     }, [usuario]);
 
-    const eliminarCuenta = useCallback(async () => {
-        const resultado = await authService.eliminarCuenta();
+    const cambiarPassword = useCallback(async ({ passwordActual, passwordNueva }) => {
+        return authService.cambiarPassword({ passwordActual, passwordNueva });
+    }, []);
+
+    const eliminarCuenta = useCallback(async (password) => {
+        const resultado = await authService.eliminarCuenta(password);
         if (resultado.ok) {
             setUsuario(null);
         }
@@ -88,6 +99,7 @@ export function AuthProvider({ children }) {
                 restablecerPassword,
                 actualizarPerfil,
                 actualizarAvatar,
+                cambiarPassword,
                 eliminarCuenta,
                 cerrarSesion,
             }}
