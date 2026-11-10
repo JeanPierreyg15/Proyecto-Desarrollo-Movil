@@ -25,6 +25,8 @@ import {
 } from 'ionicons/icons';
 import { useAuth } from '../../auth/context/AuthContext.jsx';
 import { aplicarTema } from '../../../app/theme.js';
+import { linkService } from '../../links/services/linkService.js';
+import { tagService } from '../../tags/services/tagService.js';
 import './ProfilePage.css';
 
 const COLORES_AVATAR = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0891b2', '#475569'];
@@ -41,6 +43,30 @@ function Perfil() {
     const [mostrarToast] = useIonToast();
     const [presentarAlerta] = useIonAlert();
     const router = useIonRouter();
+
+    // Estadísticas reales dentro de la sesión actual (antes eran números inventados)
+    const [estadisticas, setEstadisticas] = useState({ links: 0, etiquetas: 0 });
+    useEffect(() => {
+        let activo = true;
+        Promise.allSettled([linkService.listar(), tagService.listar()]).then(
+            ([resultadoLinks, resultadoEtiquetas]) => {
+                if (!activo) {
+                    return;
+                }
+                setEstadisticas({
+                    links: (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok)
+                        ? resultadoLinks.value.datos.length
+                        : 0,
+                    etiquetas: (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok)
+                        ? resultadoEtiquetas.value.datos.length
+                        : 0,
+                });
+            }
+        );
+        return () => {
+            activo = false;
+        };
+    }, []);
 
     useEffect(() => {
         setNombre(usuario?.nombre ?? '');
@@ -181,16 +207,12 @@ function Perfil() {
                     {/* Estadísticas */}
                     <section className="perfil-estadisticas" aria-label="Estadísticas de la cuenta">
                         <div className="estadistica">
-                            <strong>8</strong>
+                            <strong>{estadisticas.links}</strong>
                             <span>Links</span>
                         </div>
                         <div className="estadistica">
-                            <strong>4</strong>
+                            <strong>{estadisticas.etiquetas}</strong>
                             <span>Etiquetas</span>
-                        </div>
-                        <div className="estadistica">
-                            <strong>23</strong>
-                            <span>Días activo</span>
                         </div>
                     </section>
 

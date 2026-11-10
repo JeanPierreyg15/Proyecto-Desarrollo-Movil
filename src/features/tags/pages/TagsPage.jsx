@@ -1,57 +1,125 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import TagCard from '../components/TagCard.jsx';
-import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar, IonRow, IonCol, useIonToast } from '@ionic/react';
+import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar, IonRow, IonCol, useIonToast, useIonAlert } from '@ionic/react';
 import './TagsPage.css';
 import { tagService } from '../services/tagService.js';
+import { linkService } from '../../links/services/linkService.js';
+
+const ICONOS_ETIQUETA = ['💻', '🎨', '📚', '🎵', '🎬', '📰', '🍳', '💼', '🛒', '✈️', '⚽', '🔧', '🧪', '🎮'];
+
+function iconoPara(nombre = '') {
+    return ICONOS_ETIQUETA[nombre.length % ICONOS_ETIQUETA.length];
+}
 
 const TagsPage = () => {
-    const [datosEtiquetas, setDatosEtiquetas] = useState([]);
+    const [etiquetas, setEtiquetas] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [mostrarToast] = useIonToast();
+    const [presentarAlerta] = useIonAlert();
 
-    useEffect(() => {
-        let activo = true;
+    const cargarDatos = useCallback(async () => {
         setCargando(true);
-        tagService.listar()
-            .then((datos) => {
-                if (activo) {
-                    setDatosEtiquetas(datos);
-                }
-            })
-            .catch(() => {
-                if (activo) {
-                    mostrarToast({
-                        message: 'No se pudieron cargar las etiquetas.',
-                        duration: 2500,
-                        color: 'danger',
-                        position: 'bottom',
-                    });
-                }
-            })
-            .finally(() => {
-                if (activo) {
-                    setCargando(false);
-                }
-            });
+        const [resultadoEtiquetas, resultadoLinks] = await Promise.allSettled([
+            tagService.listar(),
+            linkService.listar(),
+        ]);
 
-        return () => {
-            activo = false;
-        };
+        if (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok) {
+            const datosLinks = (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok)
+                ? resultadoLinks.value.datos
+                : [];
+            const lista = resultadoEtiquetas.value.datos.map((etiqueta) => ({
+                ...etiqueta,
+                cantidad: datosLinks.filter((link) => link.etiquetas.includes(etiqueta.nombre)).length,
+                icono: iconoPara(etiqueta.nombre),
+            }));
+            setEtiquetas(lista);
+        } else {
+            const mensaje = resultadoEtiquetas.status === 'fulfilled'
+                ? resultadoEtiquetas.value.mensaje
+                : 'No se pudieron cargar las etiquetas.';
+            mostrarToast({
+                message: mensaje,
+                duration: 2500,
+                color: 'danger',
+                position: 'bottom',
+            });
+        }
+
+        setCargando(false);
     }, [mostrarToast]);
 
-    return(
-    <IonPage>
-        <IonHeader className="ion-no-border">
-            <IonToolbar >
-                <div className="header-info">
-                <h1> Etiquetas </h1>
-                <p> 8 categorias </p>
-                </div>
-            </IonToolbar>
-        </IonHeader>
-        <IonContent>
-            <IonGrid>
-                <IonRow>
+    useEffect(() => {
+        cargarDatos();
+    }, [cargarDatos]);
+
+    const manejarNuevaEtiqueta = () => {
+        presentarAlerta({
+            header: 'Nueva etiqueta',
+            message: 'Escribe el nombre de la etiqueta que quieres crear.',
+            inputs: [
+                { type: 'text', name: 'nombre', placeholder: 'Ej: Trabajo' },
+            ],
+            buttons: [
+                { text: 'Cancelar', role: 'cancel' },
+                {
+                    text: 'Crear',
+                    handler: async (datos) => {
+                        const nombre = datos?.nombre?.trim();
+                        if (!nombre) {
+                            mostrarToast({
+                                message: 'Escribe un nombre para la etiqueta.',
+                                duration: 2000,
+                                color: 'danger',
+                                position: 'bottom',
+                            });
+                            return false;
+                        }
+                        const resultado = await tagService.crear(nombre);
+                        if (!resultado.ok) {
+                            mostrarToast({
+                                message: resultado.mensaje,
+                                duration: 2500,
+                                color: 'danger',
+                                position: 'bottom',
+                            });
+                            return false;
+                        }
+                        mostrarToast({
+                            message: 'Etiqueta creada con éxito.',
+                            duration: 2000,
+                            color: 'success',
+                            position: 'bottom',
+                        });
+                        cargarDatos();
+                        return true;
+                    },
+                },
+            ],
+        });
+    };
+
+    const manejarSeleccionEtiqueta = (etiqueta) => {
+        presentarAlerta({
+            header: etiqueta.titulo,
+            message: `Tiene ${etiqueta.cantidad} ${etiqueta.cantidad === 1 ? 'link' : 'links'} asociados. El filtro por etiqueta estará disponible en Inicio.`,
+            buttons: ['OK'],
+        });
+    };
+
+    return (
+        <IonPage>
+            <IonHeader className="ion-no-border">
+                <IonToolbar>
+                    <div className="header-info">
+                        <h1>Etiquetas</h1>
+                        <p>{etiquetas.length} {etiquetas.length === 1 ? 'categoría' : 'categorías'}</p>
+                    </div>
+                </IonToolbar>
+            </IonHeader>
+            <IonContent>
+                <IonGrid>
+                    <IonRow>
                         {cargando ? (
                             [0, 1, 2, 3].map((i) => (
                                 <IonCol size="6" key={i}>
@@ -64,27 +132,30 @@ const TagsPage = () => {
                             ))
                         ) : (
                             <>
-                                {datosEtiquetas.map((obj)=>{
-                                    return(
-                                    <IonCol size="6" key={obj.id}>
-                                    <TagCard titulo={obj.titulo} cantidad={obj.cantidad} imagen={obj.icono} onClick={() => alert(`Mostrar lista filtrada de: ${obj.titulo}`)}/>
+                                {etiquetas.map((etiqueta) => (
+                                    <IonCol size="6" key={etiqueta.id}>
+                                        <TagCard
+                                            titulo={etiqueta.titulo}
+                                            cantidad={etiqueta.cantidad}
+                                            imagen={etiqueta.icono}
+                                            onClick={() => manejarSeleccionEtiqueta(etiqueta)}
+                                        />
                                     </IonCol>
-                                    )
-                                })}
-                                <IonCol size='6'>
-                                    <div className="ghost-card" onClick={() => alert('Abrir modal para crear nueva etiqueta')}>
+                                ))}
+                                <IonCol size="6">
+                                    <button type="button" className="ghost-card" onClick={manejarNuevaEtiqueta} aria-label="Crear nueva etiqueta">
                                         <div className="ghost-icon">
                                             <span className="plus-icon">+</span>
                                         </div>
-                                    </div>
+                                    </button>
                                 </IonCol>
                             </>
                         )}
-                </IonRow>
-            </IonGrid>
-        </IonContent>
-    </IonPage>
-    )
-}
+                    </IonRow>
+                </IonGrid>
+            </IonContent>
+        </IonPage>
+    );
+};
 
-export default TagsPage
+export default TagsPage;

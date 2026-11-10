@@ -1,74 +1,81 @@
-import { createContext, useContext, useState } from 'react';
-import { authService } from '../services/authService.js';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { authService, mapearUsuario } from '../services/authService.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+    // La sesión se restaura del almacenamiento local (token) al arrancar.
     const [usuario, setUsuario] = useState(null);
+    const [cargandoSesion, setCargandoSesion] = useState(true);
 
-    const iniciarSesion = async (credenciales) => {
+    useEffect(() => {
+        let activo = true;
+        authService.restaurarSesion().then((usuarioGuardado) => {
+            if (!activo) {
+                return;
+            }
+            setUsuario(usuarioGuardado);
+            setCargandoSesion(false);
+        });
+        return () => {
+            activo = false;
+        };
+    }, []);
+
+    const iniciarSesion = useCallback(async (credenciales) => {
         const resultado = await authService.iniciarSesion(credenciales);
         if (resultado.ok) {
             setUsuario(resultado.usuario);
         }
         return resultado;
-    };
+    }, []);
 
-    const registrar = async (datos) => {
+    const registrar = useCallback(async (datos) => {
         const resultado = await authService.registrar(datos);
         if (resultado.ok) {
             setUsuario(resultado.usuario);
         }
         return resultado;
-    };
+    }, []);
 
-    const solicitarRecuperacion = (datos) => authService.solicitarRecuperacion(datos);
+    const solicitarRecuperacion = useCallback((datos) => authService.solicitarRecuperacion(datos), []);
 
-    const restablecerPassword = async (datos) => {
-        const resultado = await authService.restablecerPassword(datos);
-        if (resultado.ok && usuario?.id === resultado.usuario?.id) {
-            setUsuario(resultado.usuario);
-        }
-        return resultado;
-    };
+    const restablecerPassword = useCallback((datos) => authService.restablecerPassword(datos), []);
 
-    const actualizarPerfil = async ({ nombre, correo }) => {
+    const actualizarPerfil = useCallback(async ({ nombre, correo }) => {
         if (!usuario) {
             return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
         }
-
-        const resultado = await authService.actualizarPerfil({
-            id: usuario.id,
-            nombre,
-            correo,
-        });
+        const resultado = await authService.actualizarPerfil({ id: usuario.id, nombre, correo });
         if (resultado.ok) {
-            setUsuario(resultado.usuario);
+            const actualizado = { ...usuario, nombre: nombre ?? usuario.nombre, correo: correo ?? usuario.correo };
+            // El backend aún no persiste cambios de perfil; se reflejan en la sesión actual.
+            setUsuario(actualizado);
         }
         return resultado;
-    };
+    }, [usuario]);
 
-    const actualizarAvatar = async (avatarColor) => {
+    const actualizarAvatar = useCallback(async ({ avatarColor }) => {
         if (!usuario) {
             return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
         }
-
         const resultado = await authService.actualizarAvatar({ id: usuario.id, avatarColor });
         if (resultado.ok) {
-            setUsuario(resultado.usuario);
+            setUsuario({ ...usuario, avatarColor });
         }
         return resultado;
-    };
+    }, [usuario]);
 
-    const cerrarSesion = async () => {
+    const cerrarSesion = useCallback(async () => {
         await authService.cerrarSesion();
         setUsuario(null);
-    };
+    }, []);
 
     return (
         <AuthContext.Provider
             value={{
                 usuario,
+                cargandoSesion,
                 iniciarSesion,
                 registrar,
                 solicitarRecuperacion,
@@ -90,3 +97,5 @@ export function useAuth() {
     }
     return contexto;
 }
+
+export { mapearUsuario };

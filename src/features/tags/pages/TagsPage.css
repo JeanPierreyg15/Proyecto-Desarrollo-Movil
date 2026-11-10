@@ -60,6 +60,9 @@
     align-items: center;
     height: 140px;
     background-color: transparent;
+    width: 100%;
+    padding: 0;
+    cursor: pointer;
 }
 
 .ghost-icon {

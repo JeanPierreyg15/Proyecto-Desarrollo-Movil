@@ -1,157 +1,148 @@
-const correoValido = (correo = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim());
+// Servicio de autenticación: se comunica con la API real (Backend-MovilLocker).
+// Contrato devuelto por cada método:
+//   { ok: true, ... }              -> éxito
+//   { ok: false, mensaje, noImplementado? } -> fracaso controlado
 
-let usuarios = [];
+import { apiRequest, guardarToken, borrarToken, obtenerToken } from '../../../app/apiClient.js';
+import { correoValido, passwordValida, obtenerIniciales } from '../../../app/validaciones.js';
 
-export function obtenerIniciales(nombre = '') {
-    const letras = nombre
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((parte) => parte[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase();
-    return letras || '?';
-}
-
-function crearUsuario({ nombre, correo, password }) {
+/** Convierte un usuario de la API ({id, email, nombre}) al formato que usa la app. */
+export function mapearUsuario(usuarioApi) {
     return {
-        id: crypto.randomUUID(),
-        nombre: nombre.trim(),
-        correo: correo.trim().toLowerCase(),
-        password,
-        iniciales: obtenerIniciales(nombre),
+        id: usuarioApi.id,
+        nombre: usuarioApi.nombre,
+        correo: usuarioApi.email,
+        iniciales: obtenerIniciales(usuarioApi.nombre),
         avatarColor: '#2563eb',
-        creadoEn: new Date().toISOString(),
     };
 }
 
-function usuarioPublico(usuario) {
-    if (!usuario) {
+/** Lee el payload del JWT (parte intermedia) para recuperar el correo de la sesión. */
+export function usuarioDesdeToken(token) {
+    try {
+        const carga = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(carga));
+        const correo = payload?.sub ?? '';
+        if (!correo) {
+            return null;
+        }
+        const nombre = correo.split('@')[0];
+        return {
+            correo,
+            nombre,
+            iniciales: obtenerIniciales(nombre),
+            avatarColor: '#2563eb',
+        };
+    } catch {
         return null;
     }
-
-    const { password, ...datosPublicos } = usuario;
-    return datosPublicos;
 }
+
+const NO_IMPLEMENTADO = { ok: false, noImplementado: true, mensaje: 'Esta función todavía no está disponible en el servidor.' };
 
 export const authService = {
     async iniciarSesion({ correo, password }) {
         if (!correo?.trim() || !password) {
             return { ok: false, mensaje: 'Por favor, ingrese sus datos' };
         }
-
-        const usuario = usuarios.find((item) => item.correo === correo.trim().toLowerCase());
-        if (!usuario || usuario.password !== password) {
-            return { ok: false, mensaje: 'Correo o contraseña incorrectos' };
+        if (!correoValido(correo)) {
+            return { ok: false, mensaje: 'Ingresa un correo válido' };
         }
 
-        return { ok: true, usuario: usuarioPublico(usuario) };
+        const resultado = await apiRequest('/auth/login', {
+            metodo: 'POST',
+            datos: { email: correo.trim().toLowerCase(), password },
+            autenticado: false,
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+
+        guardarToken(resultado.datos.access_token);
+        return { ok: true, usuario: usuarioDesdeToken(resultado.datos.access_token) };
     },
 
-    async registrar({ nombre, correo, password, confirmar }) {
-        if (!nombre?.trim() || !correo?.trim() || !password || !confirmar) {
+    async registrar({ nombre, correo, password }) {
+        if (!nombre?.trim() || !correo?.trim() || !password) {
             return { ok: false, mensaje: 'Completa todos los campos' };
         }
         if (!correoValido(correo)) {
             return { ok: false, mensaje: 'Ingresa un correo válido' };
         }
-        if (password.length < 6) {
+        if (!passwordValida(password)) {
             return { ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' };
         }
-        if (password !== confirmar) {
-            return { ok: false, mensaje: 'Las contraseñas no coinciden' };
+
+        const resultado = await apiRequest('/auth/register', {
+            metodo: 'POST',
+            datos: { nombre: nombre.trim(), email: correo.trim().toLowerCase(), password },
+            autenticado: false,
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
         }
 
-        const correoNormalizado = correo.trim().toLowerCase();
-        if (usuarios.some((item) => item.correo === correoNormalizado)) {
-            return { ok: false, mensaje: 'Ese correo ya tiene una cuenta' };
+        const guardadoAutomatico = await this.iniciarSesion({ correo, password });
+        if (!guardadoAutomatico.ok) {
+            return { ok: true, usuario: mapearUsuario(resultado.datos), sesionPendiente: true };
         }
-
-        const usuario = crearUsuario({ nombre, correo, password });
-        usuarios = [...usuarios, usuario];
-        return { ok: true, usuario: usuarioPublico(usuario) };
+        return guardadoAutomatico;
     },
 
     async solicitarRecuperacion({ correo }) {
         if (!correo?.trim()) {
-            return { ok: false, mensaje: 'Ingresa tu correo electrónico' };
+            return NO_IMPLEMENTADO;
         }
         if (!correoValido(correo)) {
-            return { ok: false, mensaje: 'Ingresa un correo válido' };
+            return NO_IMPLEMENTADO;
         }
+        // El backend aún no expone un endpoint de recuperación con envío de correo.
+        return NO_IMPLEMENTADO;
+    },
 
-        const existe = usuarios.some((item) => item.correo === correo.trim().toLowerCase());
-        if (!existe) {
-            return { ok: false, mensaje: 'No hay una cuenta con ese correo' };
-        }
+    async restablecerPassword() {
+        // El backend aún no expone un endpoint para restablecer la contraseña.
+        return NO_IMPLEMENTADO;
+    },
 
+    async actualizarPerfil() {
+        // El backend aún no expone un endpoint de edición de perfil (PUT /users/me).
+        return NO_IMPLEMENTADO;
+    },
+
+    async actualizarAvatar() {
+        // El color del avatar es un dato local; el backend aún no lo almacena.
         return { ok: true };
     },
 
-    async restablecerPassword({ correo, password, confirmar }) {
-        if (!password || !confirmar) {
-            return { ok: false, mensaje: 'Completa la nueva contraseña' };
-        }
-        if (password.length < 6) {
-            return { ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' };
-        }
-        if (password !== confirmar) {
-            return { ok: false, mensaje: 'Las contraseñas no coinciden' };
+    /** Restaura la sesión guardada (se llama al arrancar la app). */
+    async restaurarSesion() {
+        const token = obtenerToken();
+        if (!token) {
+            return null;
         }
 
-        const correoNormalizado = correo.trim().toLowerCase();
-        const usuario = usuarios.find((item) => item.correo === correoNormalizado);
+        const usuario = usuarioDesdeToken(token);
         if (!usuario) {
-            return { ok: false, mensaje: 'No hay una cuenta con ese correo' };
+            borrarToken();
+            return null;
         }
 
-        const actualizado = { ...usuario, password };
-        usuarios = usuarios.map((item) => (item.id === actualizado.id ? actualizado : item));
-        return { ok: true, usuario: usuarioPublico(actualizado) };
-    },
-
-    async actualizarPerfil({ id, nombre, correo }) {
-        if (!nombre?.trim() || !correo?.trim()) {
-            return { ok: false, mensaje: 'Nombre y correo son obligatorios' };
+        // Validamos que el token siga vigente con una petición ligera.
+        const resultado = await apiRequest('/links/');
+        if (resultado.ok) {
+            return usuario;
         }
-        if (!correoValido(correo)) {
-            return { ok: false, mensaje: 'Ingresa un correo válido' };
+        if (resultado.estado === 401) {
+            borrarToken();
+            return null;
         }
-
-        const correoNormalizado = correo.trim().toLowerCase();
-        const ocupado = usuarios.some((item) => item.correo === correoNormalizado && item.id !== id);
-        if (ocupado) {
-            return { ok: false, mensaje: 'Ese correo ya está en uso' };
-        }
-
-        const usuario = usuarios.find((item) => item.id === id);
-        if (!usuario) {
-            return { ok: false, mensaje: 'No se encontró la cuenta' };
-        }
-
-        const actualizado = {
-            ...usuario,
-            nombre: nombre.trim(),
-            correo: correoNormalizado,
-            iniciales: obtenerIniciales(nombre),
-        };
-        usuarios = usuarios.map((item) => (item.id === id ? actualizado : item));
-        return { ok: true, usuario: usuarioPublico(actualizado) };
-    },
-
-    async actualizarAvatar({ id, avatarColor }) {
-        const usuario = usuarios.find((item) => item.id === id);
-        if (!usuario) {
-            return { ok: false, mensaje: 'No se encontró la cuenta' };
-        }
-
-        const actualizado = { ...usuario, avatarColor };
-        usuarios = usuarios.map((item) => (item.id === id ? actualizado : item));
-        return { ok: true, usuario: usuarioPublico(actualizado) };
+        // Error de red o servidor caído: mantenemos la sesión local para no expulsar al usuario.
+        return usuario;
     },
 
     async cerrarSesion() {
+        borrarToken();
         return { ok: true };
     },
 };

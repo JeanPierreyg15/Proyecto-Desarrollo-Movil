@@ -2,6 +2,7 @@ import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPassword
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { correoValido, passwordValida } from '../../../app/validaciones.js';
 import logo from '../assets/logo.svg';
 import '../auth.css';
 
@@ -24,7 +25,7 @@ function Registro() {
               ? 'Ingresa un correo electrónico válido.'
               : ''
         : '';
-    const errorPassword = intentoEnviar && password.length < 6
+    const errorPassword = intentoEnviar && !passwordValida(password)
         ? 'Usa al menos 6 caracteres.'
         : '';
     const errorConfirmar = intentoEnviar
@@ -38,7 +39,7 @@ function Registro() {
     const manejarRegistro = async (e) => {
         e.preventDefault();
         setIntentoEnviar(true);
-        const correoInvalido = !correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim());
+        const correoInvalido = !correo.trim() || !correoValido(correo);
         if (!nombre.trim() || correoInvalido || password.length < 6 || !confirmar || password !== confirmar) {
             return;
         }

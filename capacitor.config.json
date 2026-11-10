@@ -1,6 +1,6 @@
 {
-  "appId": "io.ionic.starter",
-  "appName": "temp",
+  "appId": "com.locker.app",
+  "appName": "Locker",
   "webDir": "dist"
 }
 

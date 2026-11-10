@@ -2,6 +2,7 @@ import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPassword
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { correoValido } from '../../../app/validaciones.js';
 import logo from '../assets/logo.svg';
 import '../auth.css';
 import './PasswordRecoveryPage.css';
@@ -29,7 +30,7 @@ function Recuperar() {
     const manejarCorreo = async (e) => {
         e.preventDefault();
         setIntentoEnviar(true);
-        if (!correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
+        if (!correo.trim() || !correoValido(correo)) {
             return;
         }
 
@@ -68,7 +69,7 @@ function Recuperar() {
     const errorCorreo = intentoEnviar && paso === 'correo'
         ? !correo.trim()
             ? 'Ingresa tu correo electrónico.'
-            : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())
+            : !correoValido(correo)
               ? 'Ingresa un correo electrónico válido.'
               : ''
         : '';

@@ -2,6 +2,7 @@ import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPassword
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { correoValido } from '../../../app/validaciones.js';
 import '../auth.css';
 import logo from '../assets/logo.svg';
 
@@ -17,16 +18,16 @@ function Login() {
     const errorCorreo = intentoEnviar
         ? !email.trim()
             ? 'Ingresa tu correo electrónico.'
-            : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-              ? 'Ingresa un correo electrónico válido.'
-              : ''
+            : !correoValido(email)
+            ? 'Ingresa un correo electrónico válido.'
+            : ''
         : '';
     const errorPassword = intentoEnviar && !password ? 'Ingresa tu contraseña.' : '';
 
     const manejarLogin = async (e) => {
         e.preventDefault();
         setIntentoEnviar(true);
-        const correoInvalido = !email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+        const correoInvalido = !email.trim() || !correoValido(email);
         if (correoInvalido || !password) {
             return;
         }
