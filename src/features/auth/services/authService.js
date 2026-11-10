@@ -1,44 +1,30 @@
 // Servicio de autenticación: se comunica con la API real (Backend-MovilLocker).
 // Contrato devuelto por cada método:
 //   { ok: true, ... }              -> éxito
-//   { ok: false, mensaje, noImplementado? } -> fracaso controlado
+//   { ok: false, mensaje }         -> fracaso controlado
 
 import { apiRequest, guardarToken, borrarToken, obtenerToken } from '../../../app/apiClient.js';
 import { correoValido, passwordValida, obtenerIniciales } from '../../../app/validaciones.js';
 
-/** Convierte un usuario de la API ({id, email, nombre}) al formato que usa la app. */
+/** Convierte un usuario de la API ({id, email, nombre, avatar_color}) al formato de la app. */
 export function mapearUsuario(usuarioApi) {
     return {
         id: usuarioApi.id,
         nombre: usuarioApi.nombre,
         correo: usuarioApi.email,
+        avatarColor: usuarioApi.avatar_color ?? '#2563eb',
         iniciales: obtenerIniciales(usuarioApi.nombre),
-        avatarColor: '#2563eb',
     };
 }
 
-/** Lee el payload del JWT (parte intermedia) para recuperar el correo de la sesión. */
-export function usuarioDesdeToken(token) {
-    try {
-        const carga = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(atob(carga));
-        const correo = payload?.sub ?? '';
-        if (!correo) {
-            return null;
-        }
-        const nombre = correo.split('@')[0];
-        return {
-            correo,
-            nombre,
-            iniciales: obtenerIniciales(nombre),
-            avatarColor: '#2563eb',
-        };
-    } catch {
+/** Solicita los datos del usuario autenticado (usando el token ya guardado). */
+async function usuarioAutenticado() {
+    const resultado = await apiRequest('/auth/me');
+    if (!resultado.ok) {
         return null;
     }
+    return mapearUsuario(resultado.datos);
 }
-
-const NO_IMPLEMENTADO = { ok: false, noImplementado: true, mensaje: 'Esta función todavía no está disponible en el servidor.' };
 
 export const authService = {
     async iniciarSesion({ correo, password }) {
@@ -59,7 +45,12 @@ export const authService = {
         }
 
         guardarToken(resultado.datos.access_token);
-        return { ok: true, usuario: usuarioDesdeToken(resultado.datos.access_token) };
+        const usuario = await usuarioAutenticado();
+        if (!usuario) {
+            borrarToken();
+            return { ok: false, mensaje: 'No se pudo iniciar la sesión' };
+        }
+        return { ok: true, usuario };
     },
 
     async registrar({ nombre, correo, password }) {
@@ -82,6 +73,7 @@ export const authService = {
             return { ok: false, mensaje: resultado.mensaje };
         }
 
+        // Registro + login automático
         const guardadoAutomatico = await this.iniciarSesion({ correo, password });
         if (!guardadoAutomatico.ok) {
             return { ok: true, usuario: mapearUsuario(resultado.datos), sesionPendiente: true };
@@ -91,27 +83,70 @@ export const authService = {
 
     async solicitarRecuperacion({ correo }) {
         if (!correo?.trim()) {
-            return NO_IMPLEMENTADO;
+            return { ok: false, mensaje: 'Ingresa tu correo electrónico' };
         }
         if (!correoValido(correo)) {
-            return NO_IMPLEMENTADO;
+            return { ok: false, mensaje: 'Ingresa un correo válido' };
         }
-        // El backend aún no expone un endpoint de recuperación con envío de correo.
-        return NO_IMPLEMENTADO;
+
+        const resultado = await apiRequest('/auth/recuperar', {
+            metodo: 'POST',
+            datos: { email: correo.trim().toLowerCase() },
+            autenticado: false,
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        return { ok: true, token: resultado.datos.reset_token };
     },
 
-    async restablecerPassword() {
-        // El backend aún no expone un endpoint para restablecer la contraseña.
-        return NO_IMPLEMENTADO;
+    async restablecerPassword({ token, password }) {
+        if (!token) {
+            return { ok: false, mensaje: 'Solicitud de recuperación no válida, empieza de nuevo' };
+        }
+        if (!passwordValida(password)) {
+            return { ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' };
+        }
+
+        const resultado = await apiRequest('/auth/restablecer', {
+            metodo: 'POST',
+            datos: { token, password },
+            autenticado: false,
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        return { ok: true };
     },
 
-    async actualizarPerfil() {
-        // El backend aún no expone un endpoint de edición de perfil (PUT /users/me).
-        return NO_IMPLEMENTADO;
+    async actualizarPerfil({ nombre }) {
+        const resultado = await apiRequest('/auth/perfil', {
+            metodo: 'PUT',
+            datos: { nombre },
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        return { ok: true, usuario: mapearUsuario(resultado.datos) };
     },
 
-    async actualizarAvatar() {
-        // El color del avatar es un dato local; el backend aún no lo almacena.
+    async actualizarAvatar({ avatarColor }) {
+        const resultado = await apiRequest('/auth/perfil', {
+            metodo: 'PUT',
+            datos: { avatar_color: avatarColor },
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        return { ok: true, usuario: mapearUsuario(resultado.datos) };
+    },
+
+    async eliminarCuenta() {
+        const resultado = await apiRequest('/auth/cuenta', { metodo: 'DELETE' });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        borrarToken();
         return { ok: true };
     },
 
@@ -122,23 +157,14 @@ export const authService = {
             return null;
         }
 
-        const usuario = usuarioDesdeToken(token);
-        if (!usuario) {
-            borrarToken();
-            return null;
-        }
-
-        // Validamos que el token siga vigente con una petición ligera.
-        const resultado = await apiRequest('/links/');
-        if (resultado.ok) {
+        const usuario = await usuarioAutenticado();
+        if (usuario) {
             return usuario;
         }
-        if (resultado.estado === 401) {
-            borrarToken();
-            return null;
-        }
-        // Error de red o servidor caído: mantenemos la sesión local para no expulsar al usuario.
-        return usuario;
+
+        // Token inválido/expirado → se limpia la sesión
+        borrarToken();
+        return null;
     },
 
     async cerrarSesion() {

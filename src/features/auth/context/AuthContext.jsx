@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { authService, mapearUsuario } from '../services/authService.js';
+import { authService } from '../services/authService.js';
 
 const AuthContext = createContext(null);
 
@@ -42,15 +42,13 @@ export function AuthProvider({ children }) {
 
     const restablecerPassword = useCallback((datos) => authService.restablecerPassword(datos), []);
 
-    const actualizarPerfil = useCallback(async ({ nombre, correo }) => {
+    const actualizarPerfil = useCallback(async ({ nombre }) => {
         if (!usuario) {
             return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
         }
-        const resultado = await authService.actualizarPerfil({ id: usuario.id, nombre, correo });
+        const resultado = await authService.actualizarPerfil({ nombre });
         if (resultado.ok) {
-            const actualizado = { ...usuario, nombre: nombre ?? usuario.nombre, correo: correo ?? usuario.correo };
-            // El backend aún no persiste cambios de perfil; se reflejan en la sesión actual.
-            setUsuario(actualizado);
+            setUsuario(resultado.usuario);
         }
         return resultado;
     }, [usuario]);
@@ -59,12 +57,20 @@ export function AuthProvider({ children }) {
         if (!usuario) {
             return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
         }
-        const resultado = await authService.actualizarAvatar({ id: usuario.id, avatarColor });
+        const resultado = await authService.actualizarAvatar({ avatarColor });
         if (resultado.ok) {
-            setUsuario({ ...usuario, avatarColor });
+            setUsuario(resultado.usuario);
         }
         return resultado;
     }, [usuario]);
+
+    const eliminarCuenta = useCallback(async () => {
+        const resultado = await authService.eliminarCuenta();
+        if (resultado.ok) {
+            setUsuario(null);
+        }
+        return resultado;
+    }, []);
 
     const cerrarSesion = useCallback(async () => {
         await authService.cerrarSesion();
@@ -82,6 +88,7 @@ export function AuthProvider({ children }) {
                 restablecerPassword,
                 actualizarPerfil,
                 actualizarAvatar,
+                eliminarCuenta,
                 cerrarSesion,
             }}
         >
@@ -97,5 +104,3 @@ export function useAuth() {
     }
     return contexto;
 }
-
-export { mapearUsuario };

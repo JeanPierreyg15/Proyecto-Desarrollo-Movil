@@ -32,7 +32,7 @@ import './ProfilePage.css';
 const COLORES_AVATAR = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0891b2', '#475569'];
 
 function Perfil() {
-    const { usuario, actualizarPerfil, actualizarAvatar, cerrarSesion } = useAuth();
+    const { usuario, actualizarPerfil, actualizarAvatar, eliminarCuenta, cerrarSesion } = useAuth();
     const [nombre, setNombre] = useState(usuario?.nombre ?? '');
     const [correo, setCorreo] = useState(usuario?.correo ?? '');
     const [bio, setBio] = useState('');
@@ -75,7 +75,7 @@ function Perfil() {
 
     const manejarGuardar = async (e) => {
         e.preventDefault();
-        const resultado = await actualizarPerfil({ nombre, correo });
+        const resultado = await actualizarPerfil({ nombre });
         mostrarToast({
             message: resultado.ok ? 'Perfil actualizado' : resultado.mensaje,
             duration: 2000,
@@ -116,14 +116,19 @@ function Perfil() {
     const manejarEliminarCuenta = () => {
         presentarAlerta({
             header: 'Eliminar cuenta',
-            message: 'Esta acción es permanente y no se puede deshacer. ¿Deseas continuar?',
+            message: 'Esta acción es permanente y borrará tu cuenta, todos tus links y tus etiquetas. ¿Deseas continuar?',
             buttons: [
                 { text: 'Cancelar', role: 'cancel' },
                 {
                     text: 'Eliminar',
                     role: 'destructive',
-                    handler: () => {
-                        mostrarToast({ message: 'La eliminación de cuenta estará disponible próximamente.', duration: 2500, color: 'medium', position: 'bottom' });
+                    handler: async () => {
+                        const resultado = await eliminarCuenta();
+                        if (!resultado.ok) {
+                            mostrarToast({ message: resultado.mensaje, duration: 2500, color: 'danger', position: 'bottom' });
+                            return;
+                        }
+                        router.push('/', 'root', 'replace');
                     },
                 },
             ],
@@ -240,12 +245,13 @@ function Perfil() {
                                 <IonInput
                                     id="perfil-correo"
                                     value={correo}
-                                    onIonInput={(e) => setCorreo(e.detail.value ?? '')}
+                                    disabled
                                     className="perfil-input"
                                     type="email"
                                     placeholder="juan@ejemplo.com"
                                     fill="outline"
                                 />
+                                <p className="perfil-correo-nota">El cambio de correo no está disponible en esta versión.</p>
                             </div>
                             <div className="perfil-campo">
                                 <label htmlFor="perfil-bio">BIO</label>

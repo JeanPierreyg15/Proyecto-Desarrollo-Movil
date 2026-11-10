@@ -12,6 +12,7 @@ function Recuperar() {
     const [password, setPassword] = useState('');
     const [confirmar, setConfirmar] = useState('');
     const [paso, setPaso] = useState('correo');
+    const [tokenRecuperacion, setTokenRecuperacion] = useState('');
     const [intentoEnviar, setIntentoEnviar] = useState(false);
     const [procesando, setProcesando] = useState(false);
     const [mostrarToast] = useIonToast();
@@ -42,6 +43,8 @@ function Recuperar() {
             setProcesando(false);
             return;
         }
+        // El backend entrega el token de recuperación (en producción iría por correo)
+        setTokenRecuperacion(resultado.token);
         setPaso('clave');
         setIntentoEnviar(false);
         setProcesando(false);
@@ -56,7 +59,7 @@ function Recuperar() {
 
         setProcesando(true);
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const resultado = await restablecerPassword({ correo, password, confirmar });
+        const resultado = await restablecerPassword({ token: tokenRecuperacion, password });
         if (!resultado.ok) {
             mostrarError(resultado.mensaje);
             setProcesando(false);
