@@ -75,4 +75,12 @@ describe('tiempoRelativo', () => {
         expect(tiempoRelativo(haceUnMinuto)).toBeTypeOf('string');
         expect(tiempoRelativo(haceUnMinuto)).toContain('minuto');
     });
+
+    it('interpreta como UTC las fechas sin zona que devuelve SQLite', () => {
+        // SQLite/Pydantic podían devolver "2026-11-09T12:00:00" sin Z.
+        const haceDiezMinutos = new Date(Date.now() - 10 * 60 * 1000);
+        const sinZona = haceDiezMinutos.toISOString().replace('Z', '');
+        expect(tiempoRelativo(sinZona)).toContain('minuto');
+        expect(tiempoRelativo(sinZona)).not.toContain('hora');
+    });
 });

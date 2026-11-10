@@ -16,16 +16,27 @@ function mapearEtiqueta(tagApi) {
         nombre,
         titulo: nombre,
         icono: tagApi.icono || ICONO_POR_DEFECTO,
+        cantidad: tagApi.links_count ?? 0,
     };
 }
 
 export const tagService = {
-    async listar() {
-        const resultado = await apiRequest('/tags/');
+    async listar({ skip = 0, limit = 200 } = {}) {
+        const parametros = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+        const resultado = await apiRequest(`/tags/?${parametros}`);
         if (!resultado.ok) {
             return resultado;
         }
         return { ok: true, datos: (resultado.datos ?? []).map(mapearEtiqueta) };
+    },
+
+    /** Total de etiquetas del usuario, sin el límite de la paginación. */
+    async contar() {
+        const resultado = await apiRequest('/tags/count');
+        if (!resultado.ok) {
+            return resultado;
+        }
+        return { ok: true, datos: resultado.datos?.count ?? 0 };
     },
 
     async crear({ nombre, icono } = {}) {

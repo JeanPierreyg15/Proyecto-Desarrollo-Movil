@@ -57,7 +57,9 @@ Edita `.env` con la URL de la API según el entorno:
 - Login y registro con validaciones compartidas (`src/app/validaciones.js`).
 - Sesión persistida con `@capacitor/preferences` en móvil y `localStorage` en web.
 - Recuperación de contraseña en 3 pasos: correo → código + nueva contraseña → listo.
-  En desarrollo (`DEBUG=true` en el backend) el código se rellena automáticamente.
+  En desarrollo (`DEBUG=true` en el backend) el código se rellena automáticamente
+  solo si el backend responde a una petición desde loopback. En producción el
+  backend envía el código por SMTP.
 - Sesión expirada: cualquier 401 limpia el token y redirige al login.
 - Cambio de contraseña real (`PUT /auth/password`) que invalida sesiones anteriores.
 
@@ -68,13 +70,16 @@ Edita `.env` con la URL de la API según el entorno:
 - Menú de acciones: abrir, copiar, compartir, editar y eliminar.
 - Crear y editar links (con normalización de URLs).
 - Búsqueda por título, URL o etiqueta y filtros por etiqueta.
+- Scroll infinito por páginas de 50: ya no desaparecen los links a partir del
+  101. El contador de la cabecera usa el total real del backend (`/links/count`).
 - Pull-to-refresh, skeletons, estado vacío y estado de error con “Reintentar”.
 - Datos recargados al entrar a la pestaña (`useIonViewWillEnter`).
 
 ### Etiquetas
 - Crear etiqueta con nombre e icono elegido por el usuario.
 - Ver links de la etiqueta, renombrar/cambiar icono y eliminar.
-- Conteo de links por etiqueta y recarga al entrar a la pestaña.
+- Conteo de links por etiqueta calculado en el backend (`links_count`), no a
+  partir de los primeros 100 links. Recarga al entrar a la pestaña.
 
 ### Perfil
 - Avatar con iniciales y selector de color persistido en el backend.
@@ -131,10 +136,17 @@ npx cap open android   # o ios
 
 Recomendaciones:
 
+- `capacitor.config.json` usa `server.androidScheme: "http"` y
+  `server.cleartext: true` **solo para desarrollo**, de modo que el WebView
+  (`http://localhost`) pueda llamar a `http://10.0.2.2:8000` sin bloqueo por
+  mixed content. En producción cambia a HTTPS real y elimina `cleartext`.
+- Prueba siempre el flujo de red en un emulador/dispositivo antes de darlo por
+  cerrado: `localhost` en el dispositivo no es tu PC.
 - Usa HTTPS en producción. Android bloquea tráfico HTTP sin cifrar salvo que se
   configure `server.cleartext` **solo en desarrollo**.
 - Añade los orígenes del WebView al `CORS_ORIGINS` del backend:
-  `capacitor://localhost` y `https://localhost`.
+  `capacitor://localhost`, `https://localhost` y (en desarrollo con
+  `androidScheme: http`) `http://localhost`.
 - El token se guarda con `@capacitor/preferences` (SharedPreferences / UserDefaults).
   Para máxima seguridad en producción considera un plugin de almacenamiento seguro
   (Keychain/Keystore).

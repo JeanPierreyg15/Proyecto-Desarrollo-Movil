@@ -55,12 +55,26 @@ export function obtenerIniciales(nombre = '') {
     return letras || '?';
 }
 
+/**
+ * SQLite no guarda zona horaria: "2026-11-09T12:00:00" es UTC, pero
+ * `new Date()` lo interpretaría como hora local. Si falta la zona, se añade Z.
+ */
+function comoUtc(fechaISO) {
+    const texto = String(fechaISO).trim();
+    const tieneHora = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(texto);
+    const tieneZona = /(Z|[+-]\d{2}:?\d{2})$/i.test(texto);
+    if (tieneHora && !tieneZona) {
+        return `${texto.replace(' ', 'T')}Z`;
+    }
+    return texto;
+}
+
 /** Devuelve un texto tipo "hace 5 min" a partir de una fecha ISO. */
 export function tiempoRelativo(fechaISO) {
     if (!fechaISO) {
         return null;
     }
-    const fecha = new Date(fechaISO);
+    const fecha = new Date(comoUtc(fechaISO));
     if (Number.isNaN(fecha.getTime())) {
         return null;
     }

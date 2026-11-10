@@ -1,7 +1,9 @@
 {
   "appId": "com.locker.app",
   "appName": "Locker",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  }
 }
-
-

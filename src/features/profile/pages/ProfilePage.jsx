@@ -51,18 +51,18 @@ function Perfil() {
         [mostrarToast]
     );
 
-    /** Estadísticas reales dentro de la sesión actual. Se recargan al entrar a la pestaña. */
+    /** Estadísticas reales (conteos del backend, sin el límite de paginación). */
     const cargarEstadisticas = useCallback(async () => {
         const [resultadoLinks, resultadoEtiquetas] = await Promise.allSettled([
-            linkService.listar(),
-            tagService.listar(),
+            linkService.contar(),
+            tagService.contar(),
         ]);
         setEstadisticas({
             links: (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok)
-                ? resultadoLinks.value.datos.length
+                ? resultadoLinks.value.datos
                 : 0,
             etiquetas: (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok)
-                ? resultadoEtiquetas.value.datos.length
+                ? resultadoEtiquetas.value.datos
                 : 0,
         });
     }, []);

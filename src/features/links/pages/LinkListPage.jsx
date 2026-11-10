@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import './LinkListPage.css';
 import LinkCard from '../components/LinkCard.jsx';
@@ -15,6 +15,8 @@ import {
     IonIcon,
     IonRefresher,
     IonRefresherContent,
+    IonInfiniteScroll,
+    IonInfiniteScrollContent,
     useIonRouter,
     useIonToast,
     useIonAlert,
@@ -28,6 +30,8 @@ import { linkService } from '../services/linkService.js';
 import { tagService } from '../../tags/services/tagService.js';
 import { abrirEnlace, compartirEnlace, copiarEnlace } from '../../../app/enlaces.js';
 
+const TAMANO_PAGINA = 50;
+
 const Home = () => {
     const { usuario } = useAuth();
     const router = useIonRouter();
@@ -37,6 +41,10 @@ const Home = () => {
     const [presentarAcciones] = useIonActionSheet();
 
     const [links, setLinks] = useState([]);
+    const [totalLinks, setTotalLinks] = useState(0);
+    const [hayMas, setHayMas] = useState(false);
+    const [cargandoMas, setCargandoMas] = useState(false);
+    const cargandoMasRef = useRef(false);
     const [etiquetas, setEtiquetas] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [errorCarga, setErrorCarga] = useState(null);
@@ -56,13 +64,15 @@ const Home = () => {
             if (!silencioso) {
                 setCargando(true);
             }
-            const [resultadoLinks, resultadoEtiquetas] = await Promise.allSettled([
-                linkService.listar(),
+            const [resultadoLinks, resultadoEtiquetas, resultadoTotal] = await Promise.allSettled([
+                linkService.listar({ limit: TAMANO_PAGINA }),
                 tagService.listar(),
+                linkService.contar(),
             ]);
 
             if (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok) {
                 setLinks(resultadoLinks.value.datos);
+                setHayMas(resultadoLinks.value.datos.length === TAMANO_PAGINA);
                 setErrorCarga(null);
             } else {
                 const mensaje = resultadoLinks.status === 'fulfilled'
@@ -78,10 +88,46 @@ const Home = () => {
                 setEtiquetas(resultadoEtiquetas.value.datos);
             }
 
+            if (resultadoTotal.status === 'fulfilled' && resultadoTotal.value.ok) {
+                setTotalLinks(resultadoTotal.value.datos);
+            } else if (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok) {
+                // Si falla el conteo, al menos mostramos lo que ya hay cargado.
+                setTotalLinks(resultadoLinks.value.datos.length);
+            }
+
             setCargando(false);
         },
         [avisar]
     );
+
+    /** Carga la siguiente página y la añade a la lista (scroll infinito). */
+    const cargarMas = useCallback(async () => {
+        if (cargandoMasRef.current || !hayMas) {
+            return;
+        }
+        cargandoMasRef.current = true;
+        setCargandoMas(true);
+
+        const resultado = await linkService.listar({
+            skip: links.length,
+            limit: TAMANO_PAGINA,
+        });
+
+        if (!resultado.ok) {
+            avisar(resultado.mensaje ?? 'No se pudieron cargar más links.', 'danger');
+            cargandoMasRef.current = false;
+            setCargandoMas(false);
+            return;
+        }
+
+        setLinks((previos) => {
+            const ids = new Set(previos.map((link) => link.id));
+            return [...previos, ...resultado.datos.filter((link) => !ids.has(link.id))];
+        });
+        setHayMas(resultado.datos.length === TAMANO_PAGINA);
+        cargandoMasRef.current = false;
+        setCargandoMas(false);
+    }, [avisar, hayMas, links.length]);
 
     // Recarga al entrar a la pestaña: los datos no quedan obsoletos.
     useIonViewWillEnter(() => {
@@ -145,6 +191,7 @@ const Home = () => {
                             return;
                         }
                         setLinks((previos) => previos.filter((item) => item.id !== link.id));
+                        setTotalLinks((total) => Math.max(0, total - 1));
                         avisar('Enlace eliminado.');
                     },
                 },
@@ -206,13 +253,21 @@ const Home = () => {
     const hayFiltros = textoBusqueda.trim() !== '' || categoriasActivas.length > 0;
     const opcionesFiltro = etiquetas.map((etiqueta) => etiqueta.nombre);
 
+    // Con filtros o búsqueda activos hay que traer las páginas restantes para no
+    // buscar solo dentro de los primeros 50 links.
+    useEffect(() => {
+        if (!cargando && hayMas && hayFiltros) {
+            cargarMas();
+        }
+    }, [cargando, hayMas, hayFiltros, cargarMas]);
+
     return (
         <IonPage>
             <IonHeader className="ion-no-border">
                 <IonToolbar className="header">
                     <div className="header-info">
                         <h1>Mi Baul</h1>
-                        <p>{links.length} {links.length === 1 ? 'link guardado' : 'links guardados'}</p>
+                        <p>{totalLinks} {totalLinks === 1 ? 'link guardado' : 'links guardados'}</p>
                     </div>
                     <button
                         type="button"
@@ -272,6 +327,10 @@ const Home = () => {
                             Reintentar
                         </IonButton>
                     </div>
+                ) : tarjetasFiltradas.length === 0 && hayFiltros && hayMas ? (
+                    <div className="estado-vacio" role="status" aria-live="polite">
+                        <p>Cargando más links para completar la búsqueda...</p>
+                    </div>
                 ) : tarjetasFiltradas.length === 0 ? (
                     <div className="estado-vacio">
                         <div className="estado-vacio-icono">
@@ -306,6 +365,17 @@ const Home = () => {
                             />
                         ))}
                     </div>
+                )}
+                {!cargando && hayMas && (
+                    <IonInfiniteScroll
+                        disabled={cargandoMas}
+                        onIonInfinite={async (evento) => {
+                            await cargarMas();
+                            evento.target.complete();
+                        }}
+                    >
+                        <IonInfiniteScrollContent loadingText="Cargando más links..." />
+                    </IonInfiniteScroll>
                 )}
                 <IonFab vertical="bottom" horizontal="end" slot="fixed">
                     <IonFabButton aria-label="Guardar nuevo link" onClick={abrirCrear}>

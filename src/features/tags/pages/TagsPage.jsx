@@ -18,12 +18,12 @@ import {
 } from '@ionic/react';
 import './TagsPage.css';
 import { tagService } from '../services/tagService.js';
-import { linkService } from '../../links/services/linkService.js';
 
 const ICONOS_ETIQUETA = ['🏷️', '💻', '🎨', '📚', '🎵', '🎬', '📰', '🍳', '💼', '🛒', '✈️', '⚽', '🔧', '🧪', '🎮'];
 
 const TagsPage = () => {
     const [etiquetas, setEtiquetas] = useState([]);
+    const [totalEtiquetas, setTotalEtiquetas] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [etiquetaEditando, setEtiquetaEditando] = useState(null);
@@ -43,21 +43,19 @@ const TagsPage = () => {
 
     const cargarDatos = useCallback(async () => {
         setCargando(true);
-        const [resultadoEtiquetas, resultadoLinks] = await Promise.allSettled([
+        const [resultadoEtiquetas, resultadoTotal] = await Promise.allSettled([
             tagService.listar(),
-            linkService.listar(),
+            tagService.contar(),
         ]);
 
         if (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok) {
-            const datosLinks = (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok)
-                ? resultadoLinks.value.datos
-                : [];
-            setEtiquetas(
-                resultadoEtiquetas.value.datos.map((etiqueta) => ({
-                    ...etiqueta,
-                    cantidad: datosLinks.filter((link) => (link.etiquetas ?? []).includes(etiqueta.nombre)).length,
-                }))
-            );
+            // `cantidad` viene del backend (links_count), no de los primeros 100 links.
+            setEtiquetas(resultadoEtiquetas.value.datos);
+            if (resultadoTotal.status === 'fulfilled' && resultadoTotal.value.ok) {
+                setTotalEtiquetas(resultadoTotal.value.datos);
+            } else {
+                setTotalEtiquetas(resultadoEtiquetas.value.datos.length);
+            }
         } else {
             const mensaje = resultadoEtiquetas.status === 'fulfilled'
                 ? resultadoEtiquetas.value.mensaje
@@ -124,6 +122,7 @@ const TagsPage = () => {
                             return;
                         }
                         setEtiquetas((previas) => previas.filter((item) => item.id !== etiqueta.id));
+                        setTotalEtiquetas((total) => Math.max(0, total - 1));
                         avisar('Etiqueta eliminada.');
                     },
                 },
@@ -154,7 +153,7 @@ const TagsPage = () => {
                 <IonToolbar>
                     <div className="header-info">
                         <h1>Etiquetas</h1>
-                        <p>{etiquetas.length} {etiquetas.length === 1 ? 'categoría' : 'categorías'}</p>
+                        <p>{totalEtiquetas} {totalEtiquetas === 1 ? 'categoría' : 'categorías'}</p>
                     </div>
                 </IonToolbar>
             </IonHeader>

@@ -44,12 +44,22 @@ function prepararDatos({ titulo, url, tagIds = [] }) {
 }
 
 export const linkService = {
-    async listar() {
-        const resultado = await apiRequest('/links/');
+    async listar({ skip = 0, limit = 100 } = {}) {
+        const parametros = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+        const resultado = await apiRequest(`/links/?${parametros}`);
         if (!resultado.ok) {
             return resultado;
         }
         return { ok: true, datos: (resultado.datos ?? []).map(mapearLink) };
+    },
+
+    /** Total de links del usuario, sin el límite de la paginación. */
+    async contar() {
+        const resultado = await apiRequest('/links/count');
+        if (!resultado.ok) {
+            return resultado;
+        }
+        return { ok: true, datos: resultado.datos?.count ?? 0 };
     },
 
     async crear(datosLink) {

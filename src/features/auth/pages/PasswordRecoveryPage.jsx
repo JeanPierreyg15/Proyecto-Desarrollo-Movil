@@ -1,6 +1,6 @@
 import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle, useIonRouter } from '@ionic/react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { correoValido, passwordValida, LONGITUD_MINIMA_PASSWORD } from '../../../app/validaciones.js';
 import logo from '../assets/logo.svg';
@@ -8,11 +8,14 @@ import '../auth.css';
 import './PasswordRecoveryPage.css';
 
 function Recuperar() {
+    const [parametros] = useSearchParams();
+    const codigoEnlace = parametros.get('codigo') ?? '';
     const [correo, setCorreo] = useState('');
-    const [codigo, setCodigo] = useState('');
+    const [codigo, setCodigo] = useState(codigoEnlace);
     const [password, setPassword] = useState('');
     const [confirmar, setConfirmar] = useState('');
-    const [paso, setPaso] = useState('correo');
+    // El enlace del correo puede traer ?codigo=... y abrir directamente el paso 2.
+    const [paso, setPaso] = useState(codigoEnlace ? 'codigo' : 'correo');
     const [mensajeEnvio, setMensajeEnvio] = useState('');
     const [intentoEnviar, setIntentoEnviar] = useState(false);
     const [procesando, setProcesando] = useState(false);
@@ -46,7 +49,7 @@ function Recuperar() {
 
         setMensajeEnvio(resultado.mensaje);
         if (resultado.codigoDesarrollo) {
-            // Solo en desarrollo (DEBUG=true): el backend devuelve el código.
+            // Solo en desarrollo local (DEBUG=true + loopback): el backend devuelve el código.
             setCodigo(resultado.codigoDesarrollo);
             mostrarToast({
                 message: 'Modo desarrollo: el código se rellenó automáticamente.',

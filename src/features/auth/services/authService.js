@@ -98,8 +98,8 @@ export const authService = {
         if (!resultado.ok) {
             return { ok: false, mensaje: resultado.mensaje };
         }
-        // Mensaje genérico del backend. En modo DEBUG de desarrollo también llega
-        // el código (en producción se enviaría por email).
+        // Mensaje genérico del backend. En desarrollo local (DEBUG + loopback)
+        // también llega el código; en producción se envía por email.
         return {
             ok: true,
             mensaje: resultado.datos.mensaje,
