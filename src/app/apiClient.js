@@ -2,11 +2,20 @@
 // Todas las peticiones a la API pasan por aquí: URL base, token, timeout y
 // notificación global de sesión expirada.
 
-import { borrarToken, obtenerToken } from './almacenamiento.js';
+import { borrarToken, borrarUsuario, obtenerToken } from './almacenamiento.js';
 
 // En web (Vite) apunta a tu PC. En emulador Android, usa 10.0.2.2 en lugar de
 // localhost, y en un móvil físico la IP LAN de tu PC. Se configura en .env.
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+export function normalizarBaseUrl(valor) {
+    const texto = String(valor ?? '').trim();
+    if (!texto) {
+        return 'http://localhost:8000';
+    }
+    // VITE_API_URL=http://host:8000/ generaría URLs con doble barra.
+    return texto.replace(/\/+$/, '');
+}
+
+export const API_URL = normalizarBaseUrl(import.meta.env.VITE_API_URL);
 
 const TIEMPO_ESPERA_MS = 15000;
 
@@ -117,8 +126,10 @@ export async function apiRequest(ruta, { metodo = 'GET', datos = undefined, aute
 
     if (!respuesta.ok) {
         if (respuesta.status === 401 && autenticado) {
-            // Token inválido o expirado: se limpia la sesión y se avisa a la app
+            // Token inválido o expirado: se limpia la sesión (token y copia del
+            // perfil) y se avisa a la app para que vuelva al login.
             await borrarToken();
+            await borrarUsuario();
             manejadorNoAutorizado?.();
         }
         return { ok: false, mensaje: extraerMensaje(cuerpo), estado: respuesta.status };

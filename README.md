@@ -56,6 +56,8 @@ Edita `.env` con la URL de la API según el entorno:
 ### Autenticación
 - Login y registro con validaciones compartidas (`src/app/validaciones.js`).
 - Sesión persistida con `@capacitor/preferences` en móvil y `localStorage` en web.
+- Si la app arranca sin conexión, se muestra la última copia local del perfil y
+  el token se conserva; un 401 sí cierra la sesión y borra esa copia.
 - Recuperación de contraseña en 3 pasos: correo → código + nueva contraseña → listo.
   En desarrollo (`DEBUG=true` en el backend) el código se rellena automáticamente
   solo si el backend responde a una petición desde loopback. En producción el
@@ -123,8 +125,10 @@ src/
 npm run test.unit
 ```
 
-Los tests actuales cubren las utilidades de `src/app/validaciones.js` (correos,
-contraseñas, normalización de URLs, dominios/favicons y tiempo relativo).
+Los tests cubren las utilidades compartidas (validaciones, URLs, contraseñas),
+la apertura de enlaces, el cliente HTTP y los errores 401, la restauración de
+sesión con y sin red, el registro, la recuperación de contraseña, el formulario
+de links y la ruta comodín.
 
 ## Compilar para móvil (Capacitor)
 

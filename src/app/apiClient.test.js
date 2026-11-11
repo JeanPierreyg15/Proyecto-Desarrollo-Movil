@@ -3,9 +3,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('./almacenamiento.js', () => ({
     obtenerToken: vi.fn().mockResolvedValue(null),
     borrarToken: vi.fn().mockResolvedValue(undefined),
+    borrarUsuario: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { apiRequest, extraerMensaje } from './apiClient.js';
+import { borrarToken, borrarUsuario } from './almacenamiento.js';
+import {
+    apiRequest,
+    configurarNoAutorizado,
+    extraerMensaje,
+    normalizarBaseUrl,
+} from './apiClient.js';
+
+describe('normalizarBaseUrl', () => {
+    it('quita las barras finales para no generar URLs con doble barra', () => {
+        expect(normalizarBaseUrl('http://localhost:8000/')).toBe('http://localhost:8000');
+        expect(normalizarBaseUrl(' https://api.ejemplo.com/// ')).toBe('https://api.ejemplo.com');
+    });
+
+    it('usa localhost si no hay configuración', () => {
+        expect(normalizarBaseUrl('')).toBe('http://localhost:8000');
+        expect(normalizarBaseUrl(undefined)).toBe('http://localhost:8000');
+    });
+});
 
 describe('extraerMensaje', () => {
     it('no duplica el nombre del campo cuando el backend ya redactó el mensaje', () => {
@@ -56,6 +75,8 @@ describe('apiRequest con errores de validación', () => {
     });
 
     beforeEach(() => {
+        borrarToken.mockClear();
+        borrarUsuario.mockClear();
         vi.stubGlobal(
             'fetch',
             vi.fn().mockResolvedValue({
@@ -86,5 +107,49 @@ describe('apiRequest con errores de validación', () => {
             mensaje: 'El correo electrónico no es válido.',
             estado: 422,
         });
+    });
+});
+
+describe('apiRequest con 401', () => {
+    afterEach(() => {
+        configurarNoAutorizado(null);
+        vi.unstubAllGlobals();
+    });
+
+    beforeEach(() => {
+        borrarToken.mockClear();
+        borrarUsuario.mockClear();
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({
+                ok: false,
+                status: 401,
+                json: async () => ({ detail: 'No se pudieron validar las credenciales' }),
+            })
+        );
+    });
+
+    it('limpia token, perfil cacheado y avisa a la app', async () => {
+        const manejador = vi.fn();
+        configurarNoAutorizado(manejador);
+
+        const resultado = await apiRequest('/auth/me');
+
+        expect(resultado.estado).toBe(401);
+        expect(borrarToken).toHaveBeenCalledTimes(1);
+        expect(borrarUsuario).toHaveBeenCalledTimes(1);
+        expect(manejador).toHaveBeenCalledTimes(1);
+    });
+
+    it('no cierra la sesión en un login fallido (petición no autenticada)', async () => {
+        const resultado = await apiRequest('/auth/login', {
+            metodo: 'POST',
+            datos: { email: 'ana@ejemplo.com', password: 'mala' },
+            autenticado: false,
+        });
+
+        expect(resultado.estado).toBe(401);
+        expect(borrarToken).not.toHaveBeenCalled();
+        expect(borrarUsuario).not.toHaveBeenCalled();
     });
 });

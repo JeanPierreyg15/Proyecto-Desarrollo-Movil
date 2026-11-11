@@ -4,7 +4,14 @@
 //   { ok: false, mensaje }         -> fracaso controlado
 
 import { apiRequest } from '../../../app/apiClient.js';
-import { borrarToken, guardarToken, obtenerToken } from '../../../app/almacenamiento.js';
+import {
+    borrarToken,
+    borrarUsuario,
+    guardarToken,
+    guardarUsuario,
+    obtenerToken,
+    obtenerUsuario,
+} from '../../../app/almacenamiento.js';
 import { correoValido, passwordValida, obtenerIniciales } from '../../../app/validaciones.js';
 
 /** Convierte un usuario de la API ({id, email, nombre, avatar_color, bio}) al formato de la app. */
@@ -51,6 +58,7 @@ export const authService = {
             await borrarToken();
             return { ok: false, mensaje: 'No se pudo iniciar la sesión' };
         }
+        await guardarUsuario(usuario);
         return { ok: true, usuario };
     },
 
@@ -128,9 +136,12 @@ export const authService = {
             metodo: 'PUT',
             datos: { nombre, bio },
         });
-        return resultado.ok
-            ? { ok: true, usuario: mapearUsuario(resultado.datos) }
-            : { ok: false, mensaje: resultado.mensaje };
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        const usuario = mapearUsuario(resultado.datos);
+        await guardarUsuario(usuario);
+        return { ok: true, usuario };
     },
 
     async actualizarAvatar({ avatarColor }) {
@@ -138,9 +149,12 @@ export const authService = {
             metodo: 'PUT',
             datos: { avatar_color: avatarColor },
         });
-        return resultado.ok
-            ? { ok: true, usuario: mapearUsuario(resultado.datos) }
-            : { ok: false, mensaje: resultado.mensaje };
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        const usuario = mapearUsuario(resultado.datos);
+        await guardarUsuario(usuario);
+        return { ok: true, usuario };
     },
 
     async cambiarPassword({ passwordActual, passwordNueva }) {
@@ -165,26 +179,39 @@ export const authService = {
             return { ok: false, mensaje: resultado.mensaje };
         }
         await borrarToken();
+        await borrarUsuario();
         return { ok: true };
     },
 
-    /** Restaura la sesión guardada al arrancar la app. */
+    /**
+     * Restaura la sesión guardada al arrancar la app.
+     *
+     * Si no hay red, devuelve la copia local del perfil: el token no se borra y
+     * la persona sigue dentro de la app en modo lectura hasta que vuelva la
+     * conexión. Un 401 sí cierra la sesión y elimina esa copia.
+     */
     async restaurarSesion() {
         const token = await obtenerToken();
         if (!token) {
             return null;
         }
-        const usuario = await usuarioAutenticado();
-        if (usuario) {
+        const resultado = await apiRequest('/auth/me');
+        if (resultado.ok) {
+            const usuario = mapearUsuario(resultado.datos);
+            await guardarUsuario(usuario);
             return usuario;
         }
-        // Si fue un 401, apiClient ya borró el token. Si fue un fallo de red,
-        // se conserva para poder reintentar en el próximo arranque.
+        if (resultado.estado !== 401) {
+            // Sin conexión o error temporal del servidor: se conserva el token.
+            return obtenerUsuario();
+        }
+        await borrarUsuario();
         return null;
     },
 
     async cerrarSesion() {
         await borrarToken();
+        await borrarUsuario();
         return { ok: true };
     },
 };

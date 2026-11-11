@@ -1,3 +1,4 @@
+import React from 'react';
 import { IonContent, IonPage, IonSpinner } from '@ionic/react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext.jsx';
@@ -45,4 +46,9 @@ export function RutaPublica({ children }) {
     }
 
     return children;
+}
+
+/** Cualquier URL desconocida vuelve al inicio en vez de dejar la pantalla vacía. */
+export function RutaComodin() {
+    return <Navigate to="/" replace />;
 }
