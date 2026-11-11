@@ -50,7 +50,15 @@ describe('normalizarUrl', () => {
         expect(normalizarUrl('localhost:3000')).toBe('https://localhost:3000');
         expect(normalizarUrl('midominio.com:8080/ruta')).toBe('https://midominio.com:8080/ruta');
         expect(normalizarUrl('midominio.com:8080?x=1')).toBe('https://midominio.com:8080?x=1');
-        expect(normalizarUrl('midominio.com:8080#inicio')).toBe('https://midominio.com:8080#inicio');
+        expect(normalizarUrl('midominio.com:8080#inicio')).toBe('https://midominio.com:8080');
+    });
+
+    it('canonicaliza para que la vista previa coincida con el backend', () => {
+        expect(normalizarUrl('https://a.com/')).toBe('https://a.com');
+        expect(normalizarUrl('HTTPS://Example.COM/a')).toBe('https://example.com/a');
+        expect(normalizarUrl('http://a.com:80/x')).toBe('http://a.com/x');
+        expect(normalizarUrl('https://a.com:443/x')).toBe('https://a.com/x');
+        expect(normalizarUrl('https://a.com/x#fragmento')).toBe('https://a.com/x');
     });
 
     it('rechaza esquemas peligrosos', () => {

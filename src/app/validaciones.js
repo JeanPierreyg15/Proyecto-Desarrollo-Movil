@@ -62,7 +62,11 @@ export function normalizarUrl(valor = '') {
         if (!url.hostname || /^\.+$/.test(url.hostname)) {
             return '';
         }
-        return conEsquema;
+        // Canonicalización idéntica al backend: sin :80/:443, sin #fragmento y
+        // sin la / final cuando la ruta es solo la raíz. Así la vista previa
+        // detecta los mismos duplicados que la API.
+        const ruta = url.pathname === '/' ? '' : url.pathname;
+        return `${url.origin}${ruta}${url.search}`;
     } catch {
         return '';
     }
