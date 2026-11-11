@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    bytesDePassword,
     correoValido,
     dominioDeUrl,
     faviconDeUrl,
@@ -29,6 +30,14 @@ describe('passwordValida', () => {
         expect(passwordValida('12345678')).toBe(true);
         expect(passwordValida(null)).toBe(false);
     });
+
+    it('cuenta bytes UTF-8, no caracteres (límite de bcrypt)', () => {
+        expect(bytesDePassword('ñ')).toBe(2);
+        expect(bytesDePassword('a')).toBe(1);
+        expect(passwordValida('ñ'.repeat(40))).toBe(false);
+        expect(passwordValida('a'.repeat(72))).toBe(true);
+        expect(passwordValida('a'.repeat(73))).toBe(false);
+    });
 });
 
 describe('normalizarUrl', () => {
@@ -37,11 +46,28 @@ describe('normalizarUrl', () => {
         expect(normalizarUrl('  http://ejemplo.com/ruta  ')).toBe('http://ejemplo.com/ruta');
     });
 
+    it('acepta host:puerto sin esquema', () => {
+        expect(normalizarUrl('localhost:3000')).toBe('https://localhost:3000');
+        expect(normalizarUrl('midominio.com:8080/ruta')).toBe('https://midominio.com:8080/ruta');
+        expect(normalizarUrl('midominio.com:8080?x=1')).toBe('https://midominio.com:8080?x=1');
+        expect(normalizarUrl('midominio.com:8080#inicio')).toBe('https://midominio.com:8080#inicio');
+    });
+
     it('rechaza esquemas peligrosos', () => {
         expect(normalizarUrl('javascript:alert(1)')).toBe('');
         expect(normalizarUrl('data:text/html,<h1>x</h1>')).toBe('');
         expect(normalizarUrl('file:///etc/passwd')).toBe('');
+        expect(normalizarUrl('mailto:ana@ejemplo.com')).toBe('');
+        expect(normalizarUrl('ftp://ejemplo.com/archivo')).toBe('');
         expect(normalizarUrl('   ')).toBe('');
+    });
+
+    it('exige un hostname real y limita a 2048 caracteres', () => {
+        expect(normalizarUrl('https://user@')).toBe('');
+        expect(normalizarUrl('https://.')).toBe('');
+        expect(normalizarUrl('http://.')).toBe('');
+        expect(normalizarUrl('https://')).toBe('');
+        expect(normalizarUrl('https://ejemplo.com/' + 'x'.repeat(2048))).toBe('');
     });
 });
 

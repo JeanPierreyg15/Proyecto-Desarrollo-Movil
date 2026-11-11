@@ -15,7 +15,7 @@ import {
 } from '@ionic/react';
 import { lockClosedOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { useAuth } from '../../auth/context/AuthContext.jsx';
-import { LONGITUD_MINIMA_PASSWORD, passwordValida } from '../../../app/validaciones.js';
+import { LONGITUD_MINIMA_PASSWORD, errorPassword as mensajeErrorPassword, passwordValida } from '../../../app/validaciones.js';
 import './ChangePasswordPage.css';
 
 function CambiarContrasena() {
@@ -33,7 +33,7 @@ function CambiarContrasena() {
 
     const errorActual = intentoEnviar && !passwordActual ? 'Ingresa tu contraseña actual.' : '';
     const errorNueva = intentoEnviar && !passwordValida(nuevaPassword)
-        ? `Usa al menos ${LONGITUD_MINIMA_PASSWORD} caracteres.`
+        ? mensajeErrorPassword(nuevaPassword)
         : intentoEnviar && nuevaPassword === passwordActual
           ? 'La nueva contraseña debe ser diferente a la actual.'
           : '';

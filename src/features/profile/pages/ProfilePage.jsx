@@ -78,11 +78,12 @@ function Perfil() {
 
     const manejarGuardar = async (e) => {
         e.preventDefault();
-        if (!nombre.trim()) {
+        const nombreLimpio = nombre.trim();
+        if (!nombreLimpio) {
             avisar('El nombre no puede estar vacío.', 'danger');
             return;
         }
-        const resultado = await actualizarPerfil({ nombre, bio });
+        const resultado = await actualizarPerfil({ nombre: nombreLimpio, bio: bio.trim() });
         avisar(resultado.ok ? 'Perfil actualizado.' : resultado.mensaje, resultado.ok ? 'success' : 'danger');
     };
 

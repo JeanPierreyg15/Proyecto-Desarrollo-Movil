@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { configurarNoAutorizado } from '../../../app/apiClient.js';
 import { authService } from '../services/authService.js';
 
@@ -39,7 +39,9 @@ export function AuthProvider({ children }) {
 
     const registrar = useCallback(async (datos) => {
         const resultado = await authService.registrar(datos);
-        if (resultado.ok) {
+        // Si el login automático falló (p. ej. 429), no hay token guardado:
+        // no se puede dar la sesión por iniciada.
+        if (resultado.ok && !resultado.sesionPendiente) {
             setUsuario(resultado.usuario);
         }
         return resultado;

@@ -1,5 +1,5 @@
+import React, { useEffect, useState } from 'react';
 import { IonModal, IonContent, IonInput, useIonToast } from '@ionic/react';
-import { useEffect, useState } from 'react';
 import FilterButtons from './FilterButtons.jsx';
 import { linkService } from '../services/linkService.js';
 import { dominioDeUrl, faviconDeUrl, normalizarUrl } from '../../../app/validaciones.js';
@@ -21,7 +21,9 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
         if (link) {
             setUrl(link.url ?? '');
             setTitulo(link.titulo ?? '');
-            setEtiquetasSeleccionadas(link.etiquetas ?? []);
+            // Se guarda por id: los nombres pueden cambiar y las etiquetas
+            // pueden no haber cargado (petición fallida).
+            setEtiquetasSeleccionadas(link.tagIds ?? []);
         } else {
             setUrl('');
             setTitulo('');
@@ -37,7 +39,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
         }
         setEtiquetasSeleccionadas((previas) =>
             previas.includes(etiquetaClic)
-                ? previas.filter((nombre) => nombre !== etiquetaClic)
+                ? previas.filter((id) => id !== etiquetaClic)
                 : [...previas, etiquetaClic]
         );
     };
@@ -50,9 +52,14 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
         if (guardando) {
             return;
         }
-        const tagIds = etiquetasSeleccionadas
-            .map((nombre) => etiquetas.find((etq) => etq.nombre === nombre)?.id)
-            .filter(Boolean);
+        const etiquetasDisponibles = etiquetas.length > 0;
+        // Si la lista de etiquetas no cargó, conservamos las que ya tenía el
+        // link en vez de enviar [] y borrarlas en silencio.
+        const tagIds = etiquetasDisponibles
+            ? etiquetasSeleccionadas
+            : editando
+              ? (link.tagIds ?? [])
+              : [];
 
         setGuardando(true);
         const datos = { titulo, url, tagIds };
@@ -150,7 +157,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
                         <div className="grilla-etiquetas">
                             {etiquetas.length > 0 ? (
                                 <FilterButtons
-                                    opciones={etiquetas.map((etq) => etq.nombre)}
+                                    opciones={etiquetas.map((etq) => ({ valor: etq.id, texto: etq.nombre }))}
                                     activas={etiquetasSeleccionadas}
                                     onToggle={manejarSeleccion}
                                     mostrarTodos={false}

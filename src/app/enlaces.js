@@ -25,12 +25,18 @@ export async function abrirEnlace(url) {
             // Si el plugin falla, se intenta el fallback web.
         }
     }
-    const ventana = window.open(url, '_blank', 'noopener,noreferrer');
-    if (ventana) {
-        ventana.opener = null;
-        return true;
+    // No se pasa "noopener" como característica: algunos navegadores devuelven
+    // null aunque la pestaña sí se abra. Se corta la referencia manualmente.
+    const ventana = window.open(url, '_blank');
+    if (!ventana) {
+        return false;
     }
-    return false;
+    try {
+        ventana.opener = null;
+    } catch {
+        /* la ventana ya se abrió; no importa si el navegador no permite tocarla */
+    }
+    return true;
 }
 
 /** Copia una URL al portapapeles. */

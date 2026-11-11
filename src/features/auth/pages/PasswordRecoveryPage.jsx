@@ -1,8 +1,8 @@
 import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPasswordToggle, useIonRouter } from '@ionic/react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { correoValido, passwordValida, LONGITUD_MINIMA_PASSWORD } from '../../../app/validaciones.js';
+import { correoValido, errorPassword as mensajeErrorPassword, passwordValida, LONGITUD_MINIMA_PASSWORD } from '../../../app/validaciones.js';
 import logo from '../assets/logo.svg';
 import '../auth.css';
 import './PasswordRecoveryPage.css';
@@ -21,7 +21,7 @@ function Recuperar() {
     const [procesando, setProcesando] = useState(false);
     const [mostrarToast] = useIonToast();
     const router = useIonRouter();
-    const { solicitarRecuperacion, restablecerPassword } = useAuth();
+    const { solicitarRecuperacion, restablecerPassword, cerrarSesion } = useAuth();
 
     const mostrarError = (mensaje) => {
         mostrarToast({
@@ -76,6 +76,9 @@ function Recuperar() {
             mostrarError(resultado.mensaje);
             return;
         }
+        // Si la persona llegó con una sesión abierta, el restablecimiento ya
+        // invalidó sus tokens en el servidor: cerramos también en el cliente.
+        await cerrarSesion?.();
         setPaso('listo');
     };
 
@@ -90,7 +93,7 @@ function Recuperar() {
         ? 'Pega el código que recibiste.'
         : '';
     const errorPassword = intentoEnviar && paso === 'codigo' && !passwordValida(password)
-        ? `Usa al menos ${LONGITUD_MINIMA_PASSWORD} caracteres.`
+        ? mensajeErrorPassword(password)
         : '';
     const errorConfirmar = intentoEnviar && paso === 'codigo'
         ? !confirmar
@@ -211,7 +214,11 @@ function Recuperar() {
                     {paso === 'listo' && (
                         <div className="login-form">
                             <div className="auth-success">
-                                <p>Tu contraseña se actualizó. Inicia sesión con el correo {correo.trim().toLowerCase()}.</p>
+                                <p>
+                                    {correo.trim()
+                                        ? `Tu contraseña se actualizó. Inicia sesión con el correo ${correo.trim().toLowerCase()}.`
+                                        : 'Tu contraseña se actualizó. Inicia sesión con tu nueva contraseña.'}
+                                </p>
                             </div>
                             <IonButton className="login-button" expand="block" onClick={() => router.push('/', 'root', 'replace')}>
                                 Ir a iniciar sesión

@@ -2,7 +2,7 @@ import { IonPage, IonContent, IonInput, IonButton, useIonToast, IonInputPassword
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { correoValido, passwordValida, LONGITUD_MINIMA_PASSWORD } from '../../../app/validaciones.js';
+import { correoValido, errorPassword as mensajeErrorPassword, passwordValida, LONGITUD_MINIMA_PASSWORD } from '../../../app/validaciones.js';
 import logo from '../assets/logo.svg';
 import '../auth.css';
 
@@ -26,7 +26,7 @@ function Registro() {
               : ''
         : '';
     const errorPassword = intentoEnviar && !passwordValida(password)
-        ? `Usa al menos ${LONGITUD_MINIMA_PASSWORD} caracteres.`
+        ? mensajeErrorPassword(password)
         : '';
     const errorConfirmar = intentoEnviar
         ? !confirmar
@@ -55,6 +55,17 @@ function Registro() {
                 position: 'bottom',
             });
             setProcesando(false);
+            return;
+        }
+        if (resultado.sesionPendiente) {
+            mostrarToast({
+                message: 'Cuenta creada, inicia sesión.',
+                duration: 2600,
+                color: 'success',
+                position: 'bottom',
+            });
+            setProcesando(false);
+            router.push('/', 'root', 'replace');
             return;
         }
         router.push('/pages/Home', 'root', 'replace');

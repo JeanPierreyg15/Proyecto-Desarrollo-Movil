@@ -1,23 +1,71 @@
 // Validaciones y utilidades compartidas por todas las features.
 
 export const LONGITUD_MINIMA_PASSWORD = 8;
+export const LONGITUD_MAXIMA_BYTES_PASSWORD = 72;
+export const LONGITUD_MAXIMA_URL = 2048;
 
 export const correoValido = (correo = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(correo).trim());
 
-export const passwordValida = (password = '') =>
-    String(password ?? '').length >= LONGITUD_MINIMA_PASSWORD;
+/** Bytes UTF-8 de una contraseña (bcrypt trunca a 72 bytes, no caracteres). */
+export const bytesDePassword = (password = '') =>
+    new TextEncoder().encode(String(password ?? '')).length;
+
+export const passwordValida = (password = '') => {
+    const texto = String(password ?? '');
+    return (
+        texto.length >= LONGITUD_MINIMA_PASSWORD &&
+        bytesDePassword(texto) <= LONGITUD_MAXIMA_BYTES_PASSWORD
+    );
+};
+
+/** Mensaje de error de contraseña coherente con el backend (8 caracteres / 72 bytes). */
+export function errorPassword(password = '') {
+    const texto = String(password ?? '');
+    if (texto.length < LONGITUD_MINIMA_PASSWORD) {
+        return `Usa al menos ${LONGITUD_MINIMA_PASSWORD} caracteres.`;
+    }
+    if (bytesDePassword(texto) > LONGITUD_MAXIMA_BYTES_PASSWORD) {
+        return 'La contraseña no puede superar 72 bytes (la ñ, á, é… ocupan más de un byte).';
+    }
+    return '';
+}
 
 /** Añade https:// si falta y rechaza esquemas peligrosos (javascript:, data:, ...). */
 export function normalizarUrl(valor = '') {
-    const texto = String(valor).trim();
-    if (!texto) {
+    const texto = String(valor ?? '').trim();
+    if (!texto || texto.length > LONGITUD_MAXIMA_URL) {
         return '';
     }
-    const esquema = texto.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
-    if (esquema && !['http', 'https'].includes(esquema[1].toLowerCase())) {
+
+    let candidato = texto;
+    const esquema = texto.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):([\s\S]*)$/);
+    if (esquema) {
+        const nombre = esquema[1].toLowerCase();
+        const resto = esquema[2];
+        if (nombre === 'http' || nombre === 'https') {
+            candidato = texto;
+        } else if (/^\d{1,5}([/?#]|$)/.test(resto)) {
+            // host:puerto sin esquema (localhost:3000, midominio.com:8080/ruta)
+            candidato = `https://${texto}`;
+        } else {
+            return '';
+        }
+    }
+
+    const conEsquema = /^https?:\/\//i.test(candidato) ? candidato : `https://${candidato}`;
+    try {
+        const url = new URL(conEsquema);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+            return '';
+        }
+        // `new URL` acepta https://user@ y https://. ; exigimos un hostname real.
+        if (!url.hostname || /^\.+$/.test(url.hostname)) {
+            return '';
+        }
+        return conEsquema;
+    } catch {
         return '';
     }
-    return /^https?:\/\//i.test(texto) ? texto : `https://${texto}`;
 }
 
 /** Extrae el dominio legible de una URL (sin www). */

@@ -17,18 +17,52 @@ export function configurarNoAutorizado(handler) {
     manejadorNoAutorizado = handler;
 }
 
-function extraerMensaje(cuerpo) {
+// Nombres de campo tal y como los ve la persona que usa la app.
+const CAMPOS_ES = {
+    url: 'URL',
+    titulo: 'título',
+    nombre: 'nombre',
+    email: 'correo electrónico',
+    password: 'contraseña',
+    password_actual: 'contraseña actual',
+    password_nueva: 'contraseña nueva',
+    bio: 'biografía',
+    avatar_color: 'color del avatar',
+    tag_ids: 'etiquetas',
+    token: 'código de recuperación',
+    icono: 'icono',
+};
+
+function nombreCampo(loc = []) {
+    const partes = loc.filter((parte) => parte !== 'body' && parte !== 'query' && parte !== 'path');
+    const campo = partes.length > 0 ? String(partes[partes.length - 1]) : '';
+    return CAMPOS_ES[campo] ?? campo.replace(/_/g, ' ');
+}
+
+/** Convierte el `detail` de la API en un mensaje legible en español. */
+export function extraerMensaje(cuerpo) {
     const detalle = cuerpo?.detail;
     if (typeof detalle === 'string') {
         return detalle;
     }
-    // FastAPI devuelve errores de validación (422) como array
+    // FastAPI devuelve errores de validación (422) como array.
     if (Array.isArray(detalle)) {
         return detalle
             .map((error) => {
-                const campo = (error.loc ?? []).slice(1).join('.');
-                return campo ? `${campo}: ${error.msg}` : error.msg;
+                const campo = nombreCampo(error.loc ?? []);
+                // El backend ya redacta frases completas en español; en ese caso
+                // no hay que volver a anteponer el nombre del campo.
+                const mensaje = String(error.msg ?? '')
+                    .replace(/^Value error,\s*/i, '')
+                    .trim();
+                if (!campo || !mensaje) {
+                    return mensaje || campo;
+                }
+                return mensaje.toLowerCase().includes(campo.toLowerCase())
+                    ? mensaje
+                    : `${campo}: ${mensaje}`;
             })
+            .filter(Boolean)
             .join(' · ');
     }
     return 'Ocurrió un error inesperado';

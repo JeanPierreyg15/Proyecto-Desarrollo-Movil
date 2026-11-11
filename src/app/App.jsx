@@ -17,7 +17,7 @@ const App = () => (
                 <IonRouterOutlet>
                     <Route path="/" element={<RutaPublica><LoginPage /></RutaPublica>} />
                     <Route path="/registro" element={<RutaPublica><RegisterPage /></RutaPublica>} />
-                    <Route path="/recuperar" element={<RutaPublica><PasswordRecoveryPage /></RutaPublica>} />
+                    <Route path="/recuperar" element={<PasswordRecoveryPage />} />
                     <Route path="/cambiar-contrasena" element={<RutaProtegida><ChangePasswordPage /></RutaProtegida>} />
                     {/* Grupo de páginas con tabs: requiere sesión activa */}
                     <Route path="/pages/*" element={<RutaProtegida><TabsLayout /></RutaProtegida>} />
