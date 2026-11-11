@@ -56,7 +56,7 @@ describe('portapapeles y compartir en móvil', () => {
         expect(clipboardWriteMock).toHaveBeenCalledWith({ string: 'https://ejemplo.com' });
     });
 
-    it('comparte con el selector nativo', async () => {
+    it('comparte con el selector nativo sin duplicar la URL', async () => {
         shareMock.mockResolvedValue(undefined);
 
         const resultado = await compartirEnlace('https://ejemplo.com', 'Ejemplo');
@@ -65,6 +65,10 @@ describe('portapapeles y compartir en móvil', () => {
         expect(shareMock).toHaveBeenCalledWith(
             expect.objectContaining({ url: 'https://ejemplo.com', dialogTitle: 'Compartir enlace' })
         );
+        // Android concatena text + url: el texto no debe contener la URL.
+        const argumentos = shareMock.mock.calls[0][0];
+        expect(argumentos.url).toBe('https://ejemplo.com');
+        expect(String(argumentos.text ?? '')).not.toContain('https://ejemplo.com');
     });
 
     it('distingue la cancelación del usuario', async () => {

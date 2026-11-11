@@ -75,13 +75,14 @@ export async function compartirEnlace(url, titulo) {
     if (!url) {
         return { ok: false, copiado: false, cancelado: false };
     }
-    const texto = titulo ? `${titulo}\n${url}` : url;
 
     if (esNativo()) {
         try {
             await Share.share({
                 title: titulo || url,
-                text: texto,
+                // Android concatena text + url, así que la URL solo va en `url`
+                // para que el destino no la muestre dos veces.
+                text: titulo || undefined,
                 url,
                 dialogTitle: 'Compartir enlace',
             });

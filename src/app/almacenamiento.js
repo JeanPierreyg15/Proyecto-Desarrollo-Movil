@@ -1,11 +1,15 @@
 // Almacenamiento del token de sesión y de una copia del perfil.
-// En móvil usa Capacitor Preferences (SharedPreferences/UserDefaults) en lugar
-// de localStorage; en web cae a localStorage.
+// En móvil usa almacenamiento seguro (Keystore en Android / Keychain en iOS)
+// mediante @aparajita/capacitor-secure-storage; en web cae a localStorage.
+//
+// Los valores antiguos guardados en Capacitor Preferences (texto plano) se
+// migran al almacén seguro la primera vez que se leen.
 //
 // La copia del perfil permite seguir mostrando la sesión cuando la app arranca
 // sin conexión: el token sigue siendo válido, solo no se puede consultar /me.
 
 import { Preferences } from '@capacitor/preferences';
+import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 
 const CLAVE_TOKEN = 'locker-token';
 const CLAVE_USUARIO = 'locker-usuario';
@@ -18,10 +22,32 @@ function esNativo() {
     }
 }
 
+async function migrarDesdePreferences(clave) {
+    try {
+        const { value } = await Preferences.get({ key: clave });
+        if (value === null || value === undefined) {
+            return null;
+        }
+        await SecureStorage.set(clave, value);
+        // El texto plano ya no hace falta y no debe quedarse en el dispositivo.
+        await Preferences.remove({ key: clave });
+        return value;
+    } catch {
+        return null;
+    }
+}
+
 async function leerClave(clave) {
     if (esNativo()) {
-        const { value } = await Preferences.get({ key: clave });
-        return value ?? null;
+        try {
+            const valor = await SecureStorage.get(clave);
+            if (valor !== null && valor !== undefined) {
+                return String(valor);
+            }
+        } catch {
+            // Si el plugin falla se intenta migrar/leer el almacén anterior.
+        }
+        return migrarDesdePreferences(clave);
     }
     try {
         return localStorage.getItem(clave);
@@ -32,7 +58,7 @@ async function leerClave(clave) {
 
 async function guardarClave(clave, valor) {
     if (esNativo()) {
-        await Preferences.set({ key: clave, value: valor });
+        await SecureStorage.set(clave, valor);
         return;
     }
     try {
@@ -44,7 +70,17 @@ async function guardarClave(clave, valor) {
 
 async function borrarClave(clave) {
     if (esNativo()) {
-        await Preferences.remove({ key: clave });
+        try {
+            await SecureStorage.remove(clave);
+        } catch {
+            /* la clave pudo no existir */
+        }
+        // Limpia también una copia antigua que no llegó a migrarse.
+        try {
+            await Preferences.remove({ key: clave });
+        } catch {
+            /* Preferences no disponible */
+        }
         return;
     }
     try {

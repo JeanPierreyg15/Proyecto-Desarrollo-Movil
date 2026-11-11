@@ -11,7 +11,8 @@ perfil y modo oscuro. Consume la API de `Backend-MovilLocker` (FastAPI).
 | Librería | React 19 |
 | Router | React Router 6 |
 | Bundler | Vite 8 |
-| Móvil | Capacitor 8 (`@capacitor/preferences`, `@capacitor/browser`, `@capacitor/share`, `@capacitor/clipboard`, `@capacitor/app`) |
+| Móvil | Capacitor 8 (`@capacitor/android`, `@capacitor/ios`, `@capacitor/preferences`, `@capacitor/browser`, `@capacitor/share`, `@capacitor/clipboard`, `@capacitor/app`, `@capacitor/status-bar`, `@capacitor/keyboard`, `@capacitor/splash-screen`) |
+| Almacenamiento seguro | `@aparajita/capacitor-secure-storage` (Keystore / Keychain) |
 | Tests | Vitest + Testing Library |
 
 ## Requisitos
@@ -45,17 +46,23 @@ Edita `.env` con la URL de la API según el entorno:
 | Comando | Descripción |
 |---------|-------------|
 | `npm run dev` | Servidor de desarrollo en `http://localhost:5173` |
-| `npm run build` | Build de producción en `dist/` |
+| `npm run build` | Build de producción en `dist/` (exige `VITE_API_URL` https) |
 | `npm run preview` | Sirve el build localmente |
 | `npm run lint` | ESLint |
-| `npm run test.unit` | Tests unitarios (Vitest) |
+| `npm run test` | Tests unitarios (Vitest) |
+| `npm run test.unit` | Igual que `npm run test` |
 | `npm run test.unit:watch` | Tests en modo watch |
+| `npm run cap:sync` | Sincroniza `dist/` con los proyectos nativos (`cap sync`) |
+| `npm run android` | Abre el proyecto Android en Android Studio |
 
 ## Funcionalidades
 
 ### Autenticación
 - Login y registro con validaciones compartidas (`src/app/validaciones.js`).
-- Sesión persistida con `@capacitor/preferences` en móvil y `localStorage` en web.
+- Sesión persistida con almacenamiento seguro (`@aparajita/capacitor-secure-storage`,
+  Keystore en Android / Keychain en iOS) y `localStorage` en web. Los tokens
+  guardados antes en `@capacitor/preferences` se migran automáticamente al
+  almacén seguro y se borra la copia en texto plano.
 - Si la app arranca sin conexión, se muestra la última copia local del perfil y
   el token se conserva; un 401 sí cierra la sesión y borra esa copia.
 - Recuperación de contraseña en 3 pasos: correo → código + nueva contraseña → listo.
@@ -90,7 +97,8 @@ Edita `.env` con la URL de la API según el entorno:
 - Avatar con iniciales y selector de color persistido en el backend.
 - Edición de nombre y bio (el correo no se puede cambiar en esta versión).
 - Estadísticas reales de links y etiquetas.
-- Modo oscuro persistido.
+- Modo oscuro persistido (Preferences en nativo, `localStorage` en web) y barra
+  de estado ajustada al tema.
 - Cerrar sesión y eliminar cuenta (con confirmación de contraseña).
 
 ## Estructura
@@ -102,10 +110,10 @@ src/
 │   ├── TabsLayout.jsx       # Tabs Inicio / Etiquetas / Perfil
 │   ├── ProteccionRutas.jsx  # Rutas protegidas y públicas
 │   ├── apiClient.js         # fetch central, timeout 15 s y manejo de 401
-│   ├── almacenamiento.js    # Token con Preferences/localStorage
+│   ├── almacenamiento.js    # Token y perfil en almacén seguro (localStorage en web)
 │   ├── enlaces.js           # Abrir, copiar y compartir enlaces
 │   ├── validaciones.js      # Email, contraseña, URLs, tiempo relativo
-│   └── theme.js             # Modo oscuro
+│   └── theme.js             # Modo oscuro + barra de estado
 └── features/
     ├── auth/
     │   ├── context/AuthContext.jsx
@@ -125,37 +133,59 @@ src/
 ## Tests
 
 ```bash
-npm run test.unit
+npm run test
 ```
 
 Los tests cubren las utilidades compartidas (validaciones, URLs, contraseñas),
 la apertura de enlaces, el portapapeles y el selector nativo, el cliente HTTP y
 los errores 401, la restauración de sesión con y sin red, el registro, la
-recuperación de contraseña, el formulario de links, la ruta comodín y el botón
-atrás de Android.
+recuperación de contraseña, el almacenamiento seguro y su migración, el
+formulario de links, las rutas de `/pages`, la lista de enlaces (refresco
+silencioso, carreras y filtros), las etiquetas (error y paginación), la
+accesibilidad de `LinkCard` y el botón atrás de Android.
 
 ## Compilar para móvil (Capacitor)
 
 ```bash
-npm run build
-npx cap sync
-npx cap open android   # o ios
+$env:VITE_API_URL='https://api.tu-dominio.com'
+npm run build             # genera dist/ (exige https)
+npm run cap:sync          # copia dist/ a los proyectos nativos
+npm run android           # abre Android Studio
 ```
+
+### Configuración por entorno
+
+`capacitor.config.ts` decide el esquema del WebView según `CAPACITOR_ENV`:
+
+| Entorno | Activación | `server` |
+|---------|------------|----------|
+| Desarrollo (por defecto) | — | `androidScheme: "http"`, `cleartext: true` |
+| Producción | `CAPACITOR_ENV=production` o `NODE_ENV=production` | `androidScheme: "https"`, `cleartext: false` |
+
+Ejemplo en PowerShell:
+
+```powershell
+$env:CAPACITOR_ENV='production'
+$env:VITE_API_URL='https://api.tu-dominio.com'
+npm run cap:sync
+Remove-Item Env:CAPACITOR_ENV
+```
+
+### Build de producción
+
+`vite.config.js` falla a propósito si `VITE_API_URL` no está definida o no
+empieza por `https://`, para que un build de producción no apunte sin avisar a
+`localhost`. En desarrollo basta con el `.env` local (`http://localhost:8000`).
 
 Recomendaciones:
 
-- `capacitor.config.json` usa `server.androidScheme: "http"` y
-  `server.cleartext: true` **solo para desarrollo**, de modo que el WebView
-  (`http://localhost`) pueda llamar a `http://10.0.2.2:8000` sin bloqueo por
-  mixed content. En producción cambia a HTTPS real y elimina `cleartext`.
 - Prueba siempre el flujo de red en un emulador/dispositivo antes de darlo por
   cerrado: `localhost` en el dispositivo no es tu PC.
-- Usa HTTPS en producción. Android bloquea tráfico HTTP sin cifrar salvo que se
-  configure `server.cleartext` **solo en desarrollo**.
 - Añade los orígenes del WebView al `CORS_ORIGINS` del backend:
   `capacitor://localhost`, `https://localhost` y (en desarrollo con
   `androidScheme: http`) `http://localhost`.
-- El token se guarda con `@capacitor/preferences` (SharedPreferences / UserDefaults).
-  Para máxima seguridad en producción considera un plugin de almacenamiento seguro
-  (Keychain/Keystore).
+- Tras generar el proyecto Android por primera vez, pon `android:allowBackup="false"`
+  en `android/app/src/main/AndroidManifest.xml` para que las copias de seguridad
+  del sistema no extraigan el almacén seguro. El proyecto nativo no se versiona
+  en este repositorio, así que este paso hay que repetirlo al regenerarlo.
 - Genera iconos y splash nativos con `@capacitor/assets`.
