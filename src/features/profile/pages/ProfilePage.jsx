@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     IonPage,
     IonHeader,
@@ -77,7 +77,19 @@ function Perfil() {
         });
     }, []);
 
+    const cargadoRef = useRef(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (!cargadoRef.current) {
+                cargarEstadisticas();
+            }
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [cargarEstadisticas]);
+
     useIonViewWillEnter(() => {
+        cargadoRef.current = true;
         cargarEstadisticas();
     });
 

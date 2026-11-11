@@ -36,7 +36,7 @@ const Layout = () => {
 
     return (
         <IonTabs>
-            <IonRouterOutlet ionPage>
+            <IonRouterOutlet>
                 <Route index element={<Navigate to="Home" replace />} />
                 <Route path="Home" element={<LinkListPage />} />
                 <Route path="Etiquetas" element={<TagsPage />} />

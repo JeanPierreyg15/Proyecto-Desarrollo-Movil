@@ -1,5 +1,5 @@
 import React from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import TagCard from '../components/TagCard.jsx';
 import {
     IonButton,
@@ -101,7 +101,19 @@ const TagsPage = () => {
         setHayMasEtiquetas(resultado.datos.length === TAMANO_PAGINA_ETIQUETAS);
     }, [avisar, cargandoMas, etiquetas.length, hayMasEtiquetas]);
 
+    const cargadoRef = useRef(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (!cargadoRef.current) {
+                cargarDatos();
+            }
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [cargarDatos]);
+
     useIonViewWillEnter(() => {
+        cargadoRef.current = true;
         cargarDatos();
     });
 

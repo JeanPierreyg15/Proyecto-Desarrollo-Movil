@@ -169,7 +169,19 @@ const Home = () => {
 
     // Recarga al entrar a la pestaña. Si ya hay datos, se hace en segundo plano:
     // sin skeleton y conservando las páginas que la persona ya había cargado.
+    const cargadoRef = useRef(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (!cargadoRef.current) {
+                cargarDatos(linksRef.current.length > 0);
+            }
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [cargarDatos]);
+
     useIonViewWillEnter(() => {
+        cargadoRef.current = true;
         cargarDatos(linksRef.current.length > 0);
     });
 
