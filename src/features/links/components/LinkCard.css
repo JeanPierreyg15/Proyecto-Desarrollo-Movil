@@ -1,16 +1,31 @@
 .card{
+    position: relative;
     display:flex;
     flex-direction:row ;
     gap:10px;
     padding:10px;
     border: 1px solid var(--app-border);
     border-radius: 12px;
-    cursor: pointer;
 }
 
-.card:focus-visible{
+.card-principal{
+    display:flex;
+    flex-direction:row;
+    gap:10px;
+    width:100%;
+    padding:0;
+    border:0;
+    background:transparent;
+    color:inherit;
+    font:inherit;
+    text-align:left;
+    cursor:pointer;
+}
+
+.card-principal:focus-visible{
     outline: 3px solid rgba(37, 99, 235, 0.45);
     outline-offset: 2px;
+    border-radius: 8px;
 }
 
 .card-header{
@@ -44,14 +59,21 @@
     flex-shrink: 0;
 }
 
-.card-header-top button{
+.card-menu{
+    position:absolute;
+    top:8px;
+    right:8px;
     display:flex;
     justify-content:center;
     border:0;
     color: var(--app-text);
     background-color:transparent;
-    margin-left: auto;
     font-size: 20px;
+    cursor:pointer;
+}
+
+.card-header-top{
+    padding-right: 28px;
 }
 
 .card-footer{

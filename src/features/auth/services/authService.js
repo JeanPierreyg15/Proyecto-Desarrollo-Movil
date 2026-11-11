@@ -12,7 +12,7 @@ import {
     obtenerToken,
     obtenerUsuario,
 } from '../../../app/almacenamiento.js';
-import { correoValido, passwordValida, obtenerIniciales } from '../../../app/validaciones.js';
+import { correoValido, errorPassword, obtenerIniciales, passwordValida } from '../../../app/validaciones.js';
 
 /** Convierte un usuario de la API ({id, email, nombre, avatar_color, bio}) al formato de la app. */
 export function mapearUsuario(usuarioApi) {
@@ -70,7 +70,7 @@ export const authService = {
             return { ok: false, mensaje: 'Ingresa un correo válido' };
         }
         if (!passwordValida(password)) {
-            return { ok: false, mensaje: 'La contraseña debe tener al menos 8 caracteres' };
+            return { ok: false, mensaje: errorPassword(password) };
         }
 
         const resultado = await apiRequest('/auth/register', {
@@ -120,7 +120,7 @@ export const authService = {
             return { ok: false, mensaje: 'Pega el código que recibiste en tu correo' };
         }
         if (!passwordValida(password)) {
-            return { ok: false, mensaje: 'La contraseña debe tener al menos 8 caracteres' };
+            return { ok: false, mensaje: errorPassword(password) };
         }
 
         const resultado = await apiRequest('/auth/restablecer', {
@@ -186,27 +186,32 @@ export const authService = {
     /**
      * Restaura la sesión guardada al arrancar la app.
      *
-     * Si no hay red, devuelve la copia local del perfil: el token no se borra y
-     * la persona sigue dentro de la app en modo lectura hasta que vuelva la
-     * conexión. Un 401 sí cierra la sesión y elimina esa copia.
+     * Devuelve `{ usuario, sinConexion }`. Si no hay red, conserva la copia
+     * local del perfil y marca `sinConexion` para que la app avise y reintente.
+     * Un 401 sí cierra la sesión y elimina esa copia.
      */
     async restaurarSesion() {
         const token = await obtenerToken();
         if (!token) {
-            return null;
+            return { usuario: null, sinConexion: false };
         }
+        return this.consultarSesion();
+    },
+
+    /** Vuelve a preguntar por /auth/me (al recuperar la red o al pulsar Reintentar). */
+    async consultarSesion() {
         const resultado = await apiRequest('/auth/me');
         if (resultado.ok) {
             const usuario = mapearUsuario(resultado.datos);
             await guardarUsuario(usuario);
-            return usuario;
+            return { usuario, sinConexion: false };
         }
         if (resultado.estado !== 401) {
-            // Sin conexión o error temporal del servidor: se conserva el token.
-            return obtenerUsuario();
+            // Sin conexión o error temporal del servidor: se conserva la copia.
+            return { usuario: await obtenerUsuario(), sinConexion: true };
         }
         await borrarUsuario();
-        return null;
+        return { usuario: null, sinConexion: false };
     },
 
     async cerrarSesion() {

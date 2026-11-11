@@ -92,6 +92,7 @@ function Registro() {
                             shape="round"
                             color="primary"
                             autocomplete="name"
+                            maxlength={80}
                             aria-invalid={Boolean(errorNombre)}
                             aria-describedby={errorNombre ? 'registro-nombre-error' : undefined}
                         />

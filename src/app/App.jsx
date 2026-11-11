@@ -1,8 +1,9 @@
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Navigate, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { AuthProvider } from '../features/auth/context/AuthContext.jsx';
+import AvisosSesion from './AvisosSesion.jsx';
 import { useBotonAtras } from './botonAtras.js';
 import { RutaComodin, RutaProtegida, RutaPublica } from './ProteccionRutas.jsx';
 import LoginPage from '../features/auth/pages/LoginPage.jsx';
@@ -20,6 +21,7 @@ const App = () => (
     <IonApp>
         <AuthProvider>
             <IonReactRouter>
+                <AvisosSesion />
                 <BotonAtrasNativo />
                 <IonRouterOutlet>
                     <Route path="/" element={<RutaPublica><LoginPage /></RutaPublica>} />
@@ -27,6 +29,7 @@ const App = () => (
                     <Route path="/recuperar" element={<PasswordRecoveryPage />} />
                     <Route path="/cambiar-contrasena" element={<RutaProtegida><ChangePasswordPage /></RutaProtegida>} />
                     {/* Grupo de páginas con tabs: requiere sesión activa */}
+                    <Route path="/pages" element={<Navigate to="/pages/Home" replace />} />
                     <Route path="/pages/*" element={<RutaProtegida><TabsLayout /></RutaProtegida>} />
                     <Route path="*" element={<RutaComodin />} />
                 </IonRouterOutlet>

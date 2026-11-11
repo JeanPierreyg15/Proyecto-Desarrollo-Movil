@@ -121,3 +121,21 @@ html, body, #root {
   --background: var(--ion-color-primary);
   font-weight: 600;
 }
+
+/* Aviso global de sesión sin conexión */
+.aviso-sin-conexion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--ion-color-warning, #ffc409);
+  color: #3b2f00;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.aviso-sin-conexion ion-button {
+  margin-left: auto;
+  --color: #3b2f00;
+  font-weight: 700;
+}

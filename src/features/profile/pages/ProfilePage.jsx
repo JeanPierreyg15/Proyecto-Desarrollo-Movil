@@ -30,6 +30,16 @@ import { tagService } from '../../tags/services/tagService.js';
 import './ProfilePage.css';
 
 const COLORES_AVATAR = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0891b2', '#475569'];
+const NOMBRES_COLOR = {
+    '#2563eb': 'Azul',
+    '#7c3aed': 'Morado',
+    '#db2777': 'Rosa',
+    '#dc2626': 'Rojo',
+    '#ea580c': 'Naranja',
+    '#16a34a': 'Verde',
+    '#0891b2': 'Turquesa',
+    '#475569': 'Gris',
+};
 
 function Perfil() {
     const { usuario, actualizarPerfil, actualizarAvatar, eliminarCuenta, cerrarSesion } = useAuth();
@@ -207,7 +217,7 @@ function Perfil() {
                                     type="button"
                                     role="radio"
                                     aria-checked={color === colorAvatar}
-                                    aria-label={`Usar color ${color}`}
+                                    aria-label={`Usar color ${NOMBRES_COLOR[color] ?? color}`}
                                     className={`avatar-color ${color === colorAvatar ? 'avatar-color--activo' : ''}`}
                                     style={{ backgroundColor: color }}
                                     onClick={() => manejarColorAvatar(color)}
@@ -236,9 +246,10 @@ function Perfil() {
                         </div>
                         <form onSubmit={manejarGuardar} className="perfil-form">
                             <div className="perfil-campo">
-                                <label htmlFor="perfil-nombre">NOMBRE COMPLETO</label>
                                 <IonInput
                                     id="perfil-nombre"
+                                    label="NOMBRE COMPLETO"
+                                    labelPlacement="stacked"
                                     value={nombre}
                                     onIonInput={(e) => setNombre(e.detail.value ?? '')}
                                     className="perfil-input"
@@ -249,9 +260,10 @@ function Perfil() {
                                 />
                             </div>
                             <div className="perfil-campo">
-                                <label htmlFor="perfil-correo">CORREO ELECTRÓNICO</label>
                                 <IonInput
                                     id="perfil-correo"
+                                    label="CORREO ELECTRÓNICO"
+                                    labelPlacement="stacked"
                                     value={usuario.correo}
                                     disabled
                                     className="perfil-input"
@@ -262,9 +274,10 @@ function Perfil() {
                                 <p className="perfil-correo-nota">El cambio de correo no está disponible en esta versión.</p>
                             </div>
                             <div className="perfil-campo">
-                                <label htmlFor="perfil-bio">BIO</label>
                                 <IonTextarea
                                     id="perfil-bio"
+                                    label="BIO"
+                                    labelPlacement="stacked"
                                     value={bio}
                                     onIonInput={(e) => setBio(e.detail.value ?? '')}
                                     className="perfil-input perfil-bio"

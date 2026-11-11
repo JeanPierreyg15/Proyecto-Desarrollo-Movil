@@ -1,3 +1,4 @@
+import React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import './LinkListPage.css';
@@ -45,6 +46,10 @@ const Home = () => {
     const [hayMas, setHayMas] = useState(false);
     const [cargandoMas, setCargandoMas] = useState(false);
     const cargandoMasRef = useRef(false);
+    const linksRef = useRef([]);
+    linksRef.current = links;
+    // Identificador de la carga completa en curso: las respuestas viejas se descartan.
+    const peticionRef = useRef(0);
     const [etiquetas, setEtiquetas] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [errorCarga, setErrorCarga] = useState(null);
@@ -61,6 +66,7 @@ const Home = () => {
 
     const cargarDatos = useCallback(
         async (silencioso = false) => {
+            const idPeticion = ++peticionRef.current;
             if (!silencioso) {
                 setCargando(true);
             }
@@ -70,9 +76,26 @@ const Home = () => {
                 linkService.contar(),
             ]);
 
+            // Si mientras tanto empezó otra carga (refresher, reentrada a la
+            // pestaña...), esta respuesta ya no representa el estado actual.
+            if (idPeticion !== peticionRef.current) {
+                return;
+            }
+
             if (resultadoLinks.status === 'fulfilled' && resultadoLinks.value.ok) {
-                setLinks(resultadoLinks.value.datos);
-                setHayMas(resultadoLinks.value.datos.length === TAMANO_PAGINA);
+                const datos = resultadoLinks.value.datos;
+                setLinks((previos) => {
+                    // Un refresco silencioso no debe tirar las páginas ya
+                    // cargadas: se reemplaza la primera página y se conserva el resto.
+                    if (!silencioso || previos.length <= datos.length) {
+                        return datos;
+                    }
+                    const ids = new Set(datos.map((link) => link.id));
+                    return [...datos, ...previos.filter((link) => !ids.has(link.id))];
+                });
+                setHayMas((previo) =>
+                    silencioso && previo ? true : datos.length === TAMANO_PAGINA
+                );
                 setErrorCarga(null);
             } else {
                 const mensaje = resultadoLinks.status === 'fulfilled'
@@ -85,7 +108,14 @@ const Home = () => {
             }
 
             if (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok) {
-                setEtiquetas(resultadoEtiquetas.value.datos);
+                const nuevasEtiquetas = resultadoEtiquetas.value.datos;
+                setEtiquetas(nuevasEtiquetas);
+                // Filtro por id: si una etiqueta se renombró o eliminó, el id
+                // sigue siendo válido; si desapareció, se limpia el filtro.
+                const idsVigentes = new Set(nuevasEtiquetas.map((etiqueta) => etiqueta.id));
+                setCategoriasActivas((previas) =>
+                    previas.filter((id) => idsVigentes.has(id))
+                );
             }
 
             if (resultadoTotal.status === 'fulfilled' && resultadoTotal.value.ok) {
@@ -107,11 +137,19 @@ const Home = () => {
         }
         cargandoMasRef.current = true;
         setCargandoMas(true);
+        const idPeticion = peticionRef.current;
 
         const resultado = await linkService.listar({
-            skip: links.length,
+            skip: linksRef.current.length,
             limit: TAMANO_PAGINA,
         });
+
+        // Otra carga completa empezó después: esta página ya no encaja.
+        if (idPeticion !== peticionRef.current) {
+            cargandoMasRef.current = false;
+            setCargandoMas(false);
+            return;
+        }
 
         if (!resultado.ok) {
             avisar(resultado.mensaje ?? 'No se pudieron cargar más links.', 'danger');
@@ -127,20 +165,33 @@ const Home = () => {
         setHayMas(resultado.datos.length === TAMANO_PAGINA);
         cargandoMasRef.current = false;
         setCargandoMas(false);
-    }, [avisar, hayMas, links.length]);
+    }, [avisar, hayMas]);
 
-    // Recarga al entrar a la pestaña: los datos no quedan obsoletos.
+    // Recarga al entrar a la pestaña. Si ya hay datos, se hace en segundo plano:
+    // sin skeleton y conservando las páginas que la persona ya había cargado.
     useIonViewWillEnter(() => {
-        cargarDatos();
+        cargarDatos(linksRef.current.length > 0);
     });
 
-    // Permite llegar desde Etiquetas con /pages/Home?etiqueta=Nombre
+    // Permite llegar desde Etiquetas con ?etiquetaId=... (o el nombre antiguo).
     useEffect(() => {
-        const etiqueta = new URLSearchParams(location.search).get('etiqueta');
-        if (etiqueta) {
-            setCategoriasActivas([etiqueta]);
+        const parametros = new URLSearchParams(location.search);
+        const id = parametros.get('etiquetaId');
+        if (id) {
+            setCategoriasActivas([Number(id)]);
         }
     }, [location.search]);
+
+    useEffect(() => {
+        const nombre = new URLSearchParams(location.search).get('etiqueta');
+        if (!nombre || etiquetas.length === 0) {
+            return;
+        }
+        const encontrada = etiquetas.find((etiqueta) => etiqueta.nombre === nombre);
+        if (encontrada) {
+            setCategoriasActivas([encontrada.id]);
+        }
+    }, [etiquetas, location.search]);
 
     const manejarFiltro = (valor) => {
         if (valor === null) {
@@ -152,6 +203,25 @@ const Home = () => {
                 ? previas.filter((categoria) => categoria !== valor)
                 : [...previas, valor]
         );
+    };
+
+    const manejarGuardado = (linkGuardado) => {
+        if (!linkGuardado) {
+            return;
+        }
+        setLinks((previos) => {
+            const existe = previos.some((link) => link.id === linkGuardado.id);
+            if (existe) {
+                return previos.map((link) => (link.id === linkGuardado.id ? linkGuardado : link));
+            }
+            return [linkGuardado, ...previos];
+        });
+        // Solo se refresca el contador: no se colapsa la lista a la primera página.
+        linkService.contar().then((resultado) => {
+            if (resultado.ok) {
+                setTotalLinks(resultado.datos);
+            }
+        });
     };
 
     const manejarAbrir = async (link) => {
@@ -238,7 +308,7 @@ const Home = () => {
             );
         const coincideCategoria =
             categoriasActivas.length === 0 ||
-            categoriasActivas.some((categoria) => (link.etiquetas ?? []).includes(categoria));
+            categoriasActivas.some((categoria) => (link.tagIds ?? []).includes(categoria));
         return coincideTexto && coincideCategoria;
     });
 
@@ -251,7 +321,10 @@ const Home = () => {
     };
 
     const hayFiltros = textoBusqueda.trim() !== '' || categoriasActivas.length > 0;
-    const opcionesFiltro = etiquetas.map((etiqueta) => etiqueta.nombre);
+    const opcionesFiltro = etiquetas.map((etiqueta) => ({
+        valor: etiqueta.id,
+        texto: etiqueta.nombre,
+    }));
 
     // Con filtros o búsqueda activos hay que traer las páginas restantes para no
     // buscar solo dentro de los primeros 50 links.
@@ -266,7 +339,7 @@ const Home = () => {
             <IonHeader className="ion-no-border">
                 <IonToolbar className="header">
                     <div className="header-info">
-                        <h1>Mi Baul</h1>
+                        <h1>Mi Baúl</h1>
                         <p>{totalLinks} {totalLinks === 1 ? 'link guardado' : 'links guardados'}</p>
                     </div>
                     <button
@@ -387,7 +460,7 @@ const Home = () => {
                     cerrarModal={cerrarModal}
                     etiquetas={etiquetas}
                     link={linkEditar}
-                    onGuardado={() => cargarDatos(true)}
+                    onGuardado={manejarGuardado}
                 />
             </IonContent>
         </IonPage>

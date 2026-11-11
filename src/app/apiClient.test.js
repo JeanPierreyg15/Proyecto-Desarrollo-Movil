@@ -6,7 +6,7 @@ vi.mock('./almacenamiento.js', () => ({
     borrarUsuario: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { borrarToken, borrarUsuario } from './almacenamiento.js';
+import { obtenerToken, borrarToken, borrarUsuario } from './almacenamiento.js';
 import {
     apiRequest,
     configurarNoAutorizado,
@@ -119,6 +119,7 @@ describe('apiRequest con 401', () => {
     beforeEach(() => {
         borrarToken.mockClear();
         borrarUsuario.mockClear();
+        obtenerToken.mockReset().mockResolvedValue('token-vigente');
         vi.stubGlobal(
             'fetch',
             vi.fn().mockResolvedValue({
@@ -139,6 +140,22 @@ describe('apiRequest con 401', () => {
         expect(borrarToken).toHaveBeenCalledTimes(1);
         expect(borrarUsuario).toHaveBeenCalledTimes(1);
         expect(manejador).toHaveBeenCalledTimes(1);
+    });
+
+    it('no borra el token si un 401 tardío llega tras un login nuevo', async () => {
+        // La petición usó un token, pero ya hay otro guardado: es una respuesta vieja.
+        obtenerToken
+            .mockResolvedValueOnce('token-antiguo')
+            .mockResolvedValueOnce('token-nuevo');
+        const manejador = vi.fn();
+        configurarNoAutorizado(manejador);
+
+        const resultado = await apiRequest('/auth/me');
+
+        expect(resultado.estado).toBe(401);
+        expect(borrarToken).not.toHaveBeenCalled();
+        expect(borrarUsuario).not.toHaveBeenCalled();
+        expect(manejador).not.toHaveBeenCalled();
     });
 
     it('no cierra la sesión en un login fallido (petición no autenticada)', async () => {

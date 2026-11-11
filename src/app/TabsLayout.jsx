@@ -1,3 +1,4 @@
+import React from 'react';
 import { IonRouterOutlet, IonTabs, IonTabBar, IonTabButton, IonLabel, IonIcon } from '@ionic/react';
 import { homeOutline, pricetagsOutline, personOutline } from 'ionicons/icons';
 import { Route } from 'react-router-dom';

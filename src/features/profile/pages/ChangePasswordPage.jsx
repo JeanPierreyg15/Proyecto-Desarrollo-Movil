@@ -105,10 +105,11 @@ function CambiarContrasena() {
 
                     <form onSubmit={manejarCambiarPassword} className="cambiar-form" noValidate aria-busy={procesando}>
                         <div className="cambiar-campo">
-                            <label htmlFor="cambiar-actual">CONTRASEÑA ACTUAL</label>
                             <div className="cambiar-input-password">
                                 <IonInput
                                     id="cambiar-actual"
+                                    label="CONTRASEÑA ACTUAL"
+                                    labelPlacement="stacked"
                                     value={passwordActual}
                                     onIonInput={(e) => setPasswordActual(e.detail.value ?? '')}
                                     className="cambiar-input"
@@ -131,10 +132,11 @@ function CambiarContrasena() {
                             {errorActual && <p className="auth-field-error" id="cambiar-actual-error" role="alert">{errorActual}</p>}
                         </div>
                         <div className="cambiar-campo">
-                            <label htmlFor="cambiar-nueva">NUEVA CONTRASEÑA</label>
                             <div className="cambiar-input-password">
                                 <IonInput
                                     id="cambiar-nueva"
+                                    label="NUEVA CONTRASEÑA"
+                                    labelPlacement="stacked"
                                     value={nuevaPassword}
                                     onIonInput={(e) => setNuevaPassword(e.detail.value ?? '')}
                                     className="cambiar-input"
@@ -157,10 +159,11 @@ function CambiarContrasena() {
                             {errorNueva && <p className="auth-field-error" id="cambiar-nueva-error" role="alert">{errorNueva}</p>}
                         </div>
                         <div className="cambiar-campo">
-                            <label htmlFor="cambiar-confirmar">CONFIRMAR NUEVA CONTRASEÑA</label>
                             <div className="cambiar-input-password">
                                 <IonInput
                                     id="cambiar-confirmar"
+                                    label="CONFIRMAR NUEVA CONTRASEÑA"
+                                    labelPlacement="stacked"
                                     value={confirmarPassword}
                                     onIonInput={(e) => setConfirmarPassword(e.detail.value ?? '')}
                                     className="cambiar-input"

@@ -58,18 +58,20 @@ describe('authService.restaurarSesion', () => {
             estado: 0,
         });
 
-        const usuario = await authService.restaurarSesion();
+        const { usuario, sinConexion } = await authService.restaurarSesion();
 
         expect(usuario).toEqual(PERFIL_CACHEADO);
+        expect(sinConexion).toBe(true);
         expect(obtenerUsuarioMock).toHaveBeenCalledTimes(1);
     });
 
     it('cierra la sesión y borra el perfil cacheado ante un 401', async () => {
         apiRequestMock.mockResolvedValue({ ok: false, mensaje: 'No autorizado', estado: 401 });
 
-        const usuario = await authService.restaurarSesion();
+        const { usuario, sinConexion } = await authService.restaurarSesion();
 
         expect(usuario).toBeNull();
+        expect(sinConexion).toBe(false);
         expect(borrarUsuarioMock).toHaveBeenCalledTimes(1);
     });
 
@@ -85,15 +87,15 @@ describe('authService.restaurarSesion', () => {
             },
         });
 
-        const usuario = await authService.restaurarSesion();
+        const { usuario, sinConexion } = await authService.restaurarSesion();
 
         expect(usuario.nombre).toBe('Ana María');
+        expect(sinConexion).toBe(false);
         expect(guardarUsuarioMock).toHaveBeenCalledWith(usuario);
     });
 });
 
-describe('authService.iniciarSesion y cerrarSesion', () => {
-    beforeEach(() => {
+describe('authService.iniciarSesion y cerrarSesion', () => {    beforeEach(() => {
         apiRequestMock.mockReset();
         guardarTokenMock.mockReset();
         guardarUsuarioMock.mockReset();
@@ -125,5 +127,34 @@ describe('authService.iniciarSesion y cerrarSesion', () => {
 
         expect(borrarTokenMock).toHaveBeenCalledTimes(1);
         expect(borrarUsuarioMock).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('authService mensajes de contraseña', () => {
+    beforeEach(() => {
+        apiRequestMock.mockReset();
+    });
+
+    it('explica el límite de bytes al registrar', async () => {
+        const resultado = await authService.registrar({
+            nombre: 'Ana',
+            correo: 'ana@ejemplo.com',
+            password: 'ñ'.repeat(40),
+        });
+
+        expect(resultado.ok).toBe(false);
+        expect(resultado.mensaje).toContain('72 bytes');
+        expect(apiRequestMock).not.toHaveBeenCalled();
+    });
+
+    it('explica el límite de bytes al restablecer', async () => {
+        const resultado = await authService.restablecerPassword({
+            token: 'codigo',
+            password: 'ñ'.repeat(40),
+        });
+
+        expect(resultado.ok).toBe(false);
+        expect(resultado.mensaje).toContain('72 bytes');
+        expect(apiRequestMock).not.toHaveBeenCalled();
     });
 });

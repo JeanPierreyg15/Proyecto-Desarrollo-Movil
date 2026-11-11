@@ -8,14 +8,28 @@ export function AuthProvider({ children }) {
     // La sesión se restaura del almacenamiento (token) al arrancar.
     const [usuario, setUsuario] = useState(null);
     const [cargandoSesion, setCargandoSesion] = useState(true);
+    const [sinConexion, setSinConexion] = useState(false);
+    const [mensajeSesion, setMensajeSesion] = useState(null);
+
+    const aplicarSesion = useCallback((resultado) => {
+        setUsuario(resultado.usuario);
+        setSinConexion(resultado.sinConexion);
+    }, []);
+
+    const reintentarConexion = useCallback(async () => {
+        const resultado = await authService.consultarSesion();
+        aplicarSesion(resultado);
+        return resultado;
+    }, [aplicarSesion]);
 
     useEffect(() => {
         let activo = true;
-        authService.restaurarSesion().then((usuarioGuardado) => {
+        authService.restaurarSesion().then((resultado) => {
             if (!activo) {
                 return;
             }
-            setUsuario(usuarioGuardado);
+            setUsuario(resultado.usuario);
+            setSinConexion(resultado.sinConexion);
             setCargandoSesion(false);
         });
         return () => {
@@ -23,16 +37,35 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
-    // Cuando cualquier petición recibe 401, se cierra la sesión en React y la
-    // ruta protegida redirige sola al login.
+    // Al volver la red se vuelve a preguntar /auth/me sin esperar a que la
+    // persona pulse Reintentar.
     useEffect(() => {
-        configurarNoAutorizado(() => setUsuario(null));
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+        const alRecuperarRed = () => {
+            reintentarConexion();
+        };
+        window.addEventListener('online', alRecuperarRed);
+        return () => window.removeEventListener('online', alRecuperarRed);
+    }, [reintentarConexion]);
+
+    // Cuando cualquier petición recibe 401, se cierra la sesión en React y la
+    // ruta protegida redirige sola al login (con un aviso visible).
+    useEffect(() => {
+        configurarNoAutorizado(() => {
+            setUsuario(null);
+            setSinConexion(false);
+            setMensajeSesion('Tu sesión expiró, inicia sesión de nuevo');
+        });
     }, []);
 
     const iniciarSesion = useCallback(async (credenciales) => {
         const resultado = await authService.iniciarSesion(credenciales);
         if (resultado.ok) {
             setUsuario(resultado.usuario);
+            setSinConexion(false);
+            setMensajeSesion(null);
         }
         return resultado;
     }, []);
@@ -88,13 +121,21 @@ export function AuthProvider({ children }) {
     const cerrarSesion = useCallback(async () => {
         await authService.cerrarSesion();
         setUsuario(null);
+        setSinConexion(false);
+        setMensajeSesion(null);
     }, []);
+
+    const limpiarMensajeSesion = useCallback(() => setMensajeSesion(null), []);
 
     return (
         <AuthContext.Provider
             value={{
                 usuario,
                 cargandoSesion,
+                sinConexion,
+                mensajeSesion,
+                limpiarMensajeSesion,
+                reintentarConexion,
                 iniciarSesion,
                 registrar,
                 solicitarRecuperacion,

@@ -1,9 +1,12 @@
+import React from 'react';
 import { useCallback, useState } from 'react';
 import TagCard from '../components/TagCard.jsx';
 import {
+    IonButton,
     IonContent,
     IonGrid,
     IonHeader,
+    IonIcon,
     IonInput,
     IonModal,
     IonPage,
@@ -17,14 +20,19 @@ import {
     useIonViewWillEnter,
 } from '@ionic/react';
 import './TagsPage.css';
+import { alertCircleOutline, refreshOutline } from 'ionicons/icons';
 import { tagService } from '../services/tagService.js';
 
 const ICONOS_ETIQUETA = ['🏷️', '💻', '🎨', '📚', '🎵', '🎬', '📰', '🍳', '💼', '🛒', '✈️', '⚽', '🔧', '🧪', '🎮'];
+const TAMANO_PAGINA_ETIQUETAS = 200;
 
 const TagsPage = () => {
     const [etiquetas, setEtiquetas] = useState([]);
     const [totalEtiquetas, setTotalEtiquetas] = useState(0);
     const [cargando, setCargando] = useState(true);
+    const [errorCarga, setErrorCarga] = useState(null);
+    const [hayMasEtiquetas, setHayMasEtiquetas] = useState(false);
+    const [cargandoMas, setCargandoMas] = useState(false);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [etiquetaEditando, setEtiquetaEditando] = useState(null);
     const [nombreForm, setNombreForm] = useState('');
@@ -44,27 +52,54 @@ const TagsPage = () => {
     const cargarDatos = useCallback(async () => {
         setCargando(true);
         const [resultadoEtiquetas, resultadoTotal] = await Promise.allSettled([
-            tagService.listar(),
+            tagService.listar({ limit: TAMANO_PAGINA_ETIQUETAS }),
             tagService.contar(),
         ]);
 
         if (resultadoEtiquetas.status === 'fulfilled' && resultadoEtiquetas.value.ok) {
             // `cantidad` viene del backend (links_count), no de los primeros 100 links.
-            setEtiquetas(resultadoEtiquetas.value.datos);
+            const datos = resultadoEtiquetas.value.datos;
+            setEtiquetas(datos);
+            setHayMasEtiquetas(datos.length === TAMANO_PAGINA_ETIQUETAS);
+            setErrorCarga(null);
             if (resultadoTotal.status === 'fulfilled' && resultadoTotal.value.ok) {
                 setTotalEtiquetas(resultadoTotal.value.datos);
             } else {
-                setTotalEtiquetas(resultadoEtiquetas.value.datos.length);
+                setTotalEtiquetas(datos.length);
             }
         } else {
             const mensaje = resultadoEtiquetas.status === 'fulfilled'
                 ? resultadoEtiquetas.value.mensaje
                 : 'No se pudieron cargar las etiquetas.';
+            setErrorCarga(mensaje);
             avisar(mensaje, 'danger');
         }
 
         setCargando(false);
     }, [avisar]);
+
+    /** Siguiente página de etiquetas (el backend limita a 500 por petición). */
+    const cargarMasEtiquetas = useCallback(async () => {
+        if (cargandoMas || !hayMasEtiquetas) {
+            return;
+        }
+        setCargandoMas(true);
+        const resultado = await tagService.listar({
+            skip: etiquetas.length,
+            limit: TAMANO_PAGINA_ETIQUETAS,
+        });
+        setCargandoMas(false);
+
+        if (!resultado.ok) {
+            avisar(resultado.mensaje ?? 'No se pudieron cargar más etiquetas.', 'danger');
+            return;
+        }
+        setEtiquetas((previas) => {
+            const ids = new Set(previas.map((etiqueta) => etiqueta.id));
+            return [...previas, ...resultado.datos.filter((etiqueta) => !ids.has(etiqueta.id))];
+        });
+        setHayMasEtiquetas(resultado.datos.length === TAMANO_PAGINA_ETIQUETAS);
+    }, [avisar, cargandoMas, etiquetas.length, hayMasEtiquetas]);
 
     useIonViewWillEnter(() => {
         cargarDatos();
@@ -131,7 +166,7 @@ const TagsPage = () => {
     };
 
     const verLinksDeEtiqueta = (etiqueta) => {
-        router.push(`/pages/Home?etiqueta=${encodeURIComponent(etiqueta.nombre)}`, 'forward', 'push');
+        router.push(`/pages/Home?etiquetaId=${etiqueta.id}`, 'forward', 'push');
     };
 
     const manejarSeleccionEtiqueta = (etiqueta) => {
@@ -170,6 +205,20 @@ const TagsPage = () => {
                                     </div>
                                 </IonCol>
                             ))
+                        ) : errorCarga && etiquetas.length === 0 ? (
+                            <IonCol size="12">
+                                <div className="estado-vacio estado-error">
+                                    <div className="estado-vacio-icono">
+                                        <IonIcon icon={alertCircleOutline} aria-hidden="true" />
+                                    </div>
+                                    <h3>No pudimos cargar tus etiquetas</h3>
+                                    <p>{errorCarga}</p>
+                                    <IonButton className="estado-vacio-boton" onClick={() => cargarDatos()}>
+                                        <IonIcon slot="start" icon={refreshOutline} aria-hidden="true" />
+                                        Reintentar
+                                    </IonButton>
+                                </div>
+                            </IonCol>
                         ) : (
                             <>
                                 {etiquetas.map((etiqueta) => (
@@ -193,6 +242,14 @@ const TagsPage = () => {
                         )}
                     </IonRow>
                 </IonGrid>
+
+                {hayMasEtiquetas && !cargando && (
+                    <div className="tags-cargar-mas">
+                        <IonButton fill="outline" disabled={cargandoMas} onClick={cargarMasEtiquetas}>
+                            {cargandoMas ? 'Cargando...' : 'Cargar más etiquetas'}
+                        </IonButton>
+                    </div>
+                )}
 
                 <IonModal
                     isOpen={modalAbierto}

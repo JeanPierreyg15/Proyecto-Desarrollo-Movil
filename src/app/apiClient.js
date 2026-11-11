@@ -85,11 +85,12 @@ export function extraerMensaje(cuerpo) {
  */
 export async function apiRequest(ruta, { metodo = 'GET', datos = undefined, autenticado = true } = {}) {
     const cabeceras = { 'Content-Type': 'application/json' };
+    let tokenUsado = null;
 
     if (autenticado) {
-        const token = await obtenerToken();
-        if (token) {
-            cabeceras.Authorization = `Bearer ${token}`;
+        tokenUsado = await obtenerToken();
+        if (tokenUsado) {
+            cabeceras.Authorization = `Bearer ${tokenUsado}`;
         }
     }
 
@@ -126,11 +127,15 @@ export async function apiRequest(ruta, { metodo = 'GET', datos = undefined, aute
 
     if (!respuesta.ok) {
         if (respuesta.status === 401 && autenticado) {
-            // Token inválido o expirado: se limpia la sesión (token y copia del
-            // perfil) y se avisa a la app para que vuelva al login.
-            await borrarToken();
-            await borrarUsuario();
-            manejadorNoAutorizado?.();
+            // Una respuesta 401 puede llegar tarde, después de que la persona
+            // haya vuelto a iniciar sesión. Solo se borra si el token usado en
+            // esta petición sigue siendo el actual.
+            const tokenActual = await obtenerToken();
+            if (tokenUsado && tokenActual === tokenUsado) {
+                await borrarToken();
+                await borrarUsuario();
+                manejadorNoAutorizado?.();
+            }
         }
         return { ok: false, mensaje: extraerMensaje(cuerpo), estado: respuesta.status };
     }

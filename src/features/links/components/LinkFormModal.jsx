@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { IonModal, IonContent, IonInput, useIonToast } from '@ionic/react';
 import FilterButtons from './FilterButtons.jsx';
 import { linkService } from '../services/linkService.js';
-import { dominioDeUrl, faviconDeUrl, normalizarUrl } from '../../../app/validaciones.js';
+import { LONGITUD_MAXIMA_URL, dominioDeUrl, faviconDeUrl, normalizarUrl } from '../../../app/validaciones.js';
 
 const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null }) => {
     const [url, setUrl] = useState('');
@@ -115,6 +115,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
                                 type="url"
                                 inputmode="url"
                                 autocomplete="url"
+                                maxlength={LONGITUD_MAXIMA_URL}
                             />
                         </div>
                         <div className="ion-item">
