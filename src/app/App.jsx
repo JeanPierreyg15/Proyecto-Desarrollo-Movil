@@ -3,6 +3,7 @@ import { Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { AuthProvider } from '../features/auth/context/AuthContext.jsx';
+import { useBotonAtras } from './botonAtras.js';
 import { RutaComodin, RutaProtegida, RutaPublica } from './ProteccionRutas.jsx';
 import LoginPage from '../features/auth/pages/LoginPage.jsx';
 import RegisterPage from '../features/auth/pages/RegisterPage.jsx';
@@ -10,10 +11,16 @@ import PasswordRecoveryPage from '../features/auth/pages/PasswordRecoveryPage.js
 import ChangePasswordPage from '../features/profile/pages/ChangePasswordPage.jsx';
 import TabsLayout from './TabsLayout.jsx';
 
+const BotonAtrasNativo = () => {
+    useBotonAtras();
+    return null;
+};
+
 const App = () => (
     <IonApp>
         <AuthProvider>
             <IonReactRouter>
+                <BotonAtrasNativo />
                 <IonRouterOutlet>
                     <Route path="/" element={<RutaPublica><LoginPage /></RutaPublica>} />
                     <Route path="/registro" element={<RutaPublica><RegisterPage /></RutaPublica>} />

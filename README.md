@@ -11,7 +11,7 @@ perfil y modo oscuro. Consume la API de `Backend-MovilLocker` (FastAPI).
 | Librería | React 19 |
 | Router | React Router 6 |
 | Bundler | Vite 8 |
-| Móvil | Capacitor 8 (`@capacitor/preferences`, `@capacitor/browser`) |
+| Móvil | Capacitor 8 (`@capacitor/preferences`, `@capacitor/browser`, `@capacitor/share`, `@capacitor/clipboard`, `@capacitor/app`) |
 | Tests | Vitest + Testing Library |
 
 ## Requisitos
@@ -69,13 +69,16 @@ Edita `.env` con la URL de la API según el entorno:
 - Lista de enlaces con favicon, título, dominio, etiquetas y tiempo relativo
   (`Intl.RelativeTimeFormat`).
 - Abrir el enlace tocando la tarjeta: `@capacitor/browser` en móvil, pestaña nueva en web.
-- Menú de acciones: abrir, copiar, compartir, editar y eliminar.
+- Menú de acciones: abrir, copiar, compartir, editar y eliminar. En móvil usa
+  el portapapeles y el selector de compartir nativos de Capacitor.
 - Crear y editar links (con normalización de URLs).
 - Búsqueda por título, URL o etiqueta y filtros por etiqueta.
 - Scroll infinito por páginas de 50: ya no desaparecen los links a partir del
   101. El contador de la cabecera usa el total real del backend (`/links/count`).
 - Pull-to-refresh, skeletons, estado vacío y estado de error con “Reintentar”.
 - Datos recargados al entrar a la pestaña (`useIonViewWillEnter`).
+- Botón atrás de Android: desde Etiquetas/Perfil vuelve a Inicio y desde Inicio
+  minimiza la app en vez de cerrarla de golpe.
 
 ### Etiquetas
 - Crear etiqueta con nombre e icono elegido por el usuario.
@@ -126,9 +129,10 @@ npm run test.unit
 ```
 
 Los tests cubren las utilidades compartidas (validaciones, URLs, contraseñas),
-la apertura de enlaces, el cliente HTTP y los errores 401, la restauración de
-sesión con y sin red, el registro, la recuperación de contraseña, el formulario
-de links y la ruta comodín.
+la apertura de enlaces, el portapapeles y el selector nativo, el cliente HTTP y
+los errores 401, la restauración de sesión con y sin red, el registro, la
+recuperación de contraseña, el formulario de links, la ruta comodín y el botón
+atrás de Android.
 
 ## Compilar para móvil (Capacitor)
 

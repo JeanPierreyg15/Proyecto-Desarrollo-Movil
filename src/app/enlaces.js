@@ -3,6 +3,8 @@
 // mediante @capacitor/browser.
 
 import { Browser } from '@capacitor/browser';
+import { Clipboard } from '@capacitor/clipboard';
+import { Share } from '@capacitor/share';
 
 export function esNativo() {
     try {
@@ -44,12 +46,25 @@ export async function copiarEnlace(url) {
     if (!url) {
         return false;
     }
+    if (esNativo()) {
+        try {
+            await Clipboard.write({ string: url });
+            return true;
+        } catch {
+            // Si el plugin nativo falla, se intenta la API del navegador.
+        }
+    }
     try {
         await navigator.clipboard.writeText(url);
         return true;
     } catch {
         return false;
     }
+}
+
+function compartirCancelado(error) {
+    const mensaje = String(error?.message ?? '').toLowerCase();
+    return error?.name === 'AbortError' || mensaje.includes('cancel');
 }
 
 /**
@@ -60,12 +75,31 @@ export async function compartirEnlace(url, titulo) {
     if (!url) {
         return { ok: false, copiado: false, cancelado: false };
     }
+    const texto = titulo ? `${titulo}\n${url}` : url;
+
+    if (esNativo()) {
+        try {
+            await Share.share({
+                title: titulo || url,
+                text: texto,
+                url,
+                dialogTitle: 'Compartir enlace',
+            });
+            return { ok: true, copiado: false, cancelado: false };
+        } catch (error) {
+            if (compartirCancelado(error)) {
+                return { ok: false, copiado: false, cancelado: true };
+            }
+            // Un fallo del plugin no debe impedir compartir: se sigue con la web.
+        }
+    }
+
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
         try {
             await navigator.share({ title: titulo || url, url });
             return { ok: true, copiado: false, cancelado: false };
         } catch (error) {
-            if (error?.name === 'AbortError') {
+            if (compartirCancelado(error)) {
                 return { ok: false, copiado: false, cancelado: true };
             }
         }
