@@ -30,7 +30,7 @@ const App = () => (
                     <Route path="/cambiar-contrasena" element={<RutaProtegida><ChangePasswordPage /></RutaProtegida>} />
                     {/* Grupo de páginas con tabs: requiere sesión activa */}
                     <Route path="/pages" element={<Navigate to="/pages/Home" replace />} />
-                    <Route path="/pages/*" element={<RutaProtegida><TabsLayout /></RutaProtegida>} />
+                    <Route path="/pages/*" element={<TabsLayout />} />
                     <Route path="*" element={<RutaComodin />} />
                 </IonRouterOutlet>
             </IonReactRouter>

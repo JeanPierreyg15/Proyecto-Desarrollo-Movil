@@ -1,31 +1,20 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { navegacion } = vi.hoisted(() => ({ navegacion: { ruta: '/pages', usuario: { id: 1, nombre: 'Ana', correo: 'ana@ejemplo.com', iniciales: 'A' } } }));
 
 vi.mock('@ionic/react', async () => {
     const React = await import('react');
-    const { matchPath, useLocation } = await import('react-router-dom');
+    const { Link, Routes } = await import('react-router-dom');
     const Passthrough = ({ children }) => <div>{children}</div>;
-    // Emula el outlet de Ionic: elige la Route cuyo path casa con la URL.
-    const IonRouterOutlet = ({ children }) => {
-        const location = useLocation();
-        const rutas = React.Children.toArray(children).filter((hijo) => hijo?.props?.path);
-        const activa = rutas.find((ruta) =>
-            matchPath(
-                { path: ruta.props.path, end: !ruta.props.path.endsWith('*') },
-                location.pathname
-            )
-        );
-        return activa ? activa.props.element : null;
-    };
+    const IonRouterOutlet = ({ children }) => <Routes>{children}</Routes>;
     return {
         IonApp: Passthrough,
         IonRouterOutlet,
         IonTabs: Passthrough,
         IonTabBar: Passthrough,
-        IonTabButton: ({ children }) => <div>{children}</div>,
+        IonTabButton: ({ children, href }) => <Link to={href}>{children}</Link>,
         IonLabel: Passthrough,
         IonIcon: () => null,
         IonPage: Passthrough,
@@ -96,11 +85,36 @@ describe('App rutas de /pages', () => {
         expect(screen.getByText('pagina-inicio')).toBeInTheDocument();
     });
 
-    it('resuelve rutas absolutas dentro de /pages/*', () => {
+    it('resuelve la ruta relativa de etiquetas dentro de /pages/*', () => {
         navegacion.ruta = '/pages/Etiquetas';
         render(<App />);
 
         expect(screen.getByText('pagina-etiquetas')).toBeInTheDocument();
+    });
+
+    it('resuelve la ruta relativa del perfil dentro de /pages/*', () => {
+        navegacion.ruta = '/pages/Perfil';
+        render(<App />);
+
+        expect(screen.getByText('pagina-perfil')).toBeInTheDocument();
+    });
+
+    it('navega entre las pestañas de etiquetas y perfil', () => {
+        render(<App />);
+
+        fireEvent.click(screen.getByText('Etiquetas'));
+        expect(screen.getByText('pagina-etiquetas')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByText('Perfil'));
+        expect(screen.getByText('pagina-perfil')).toBeInTheDocument();
+    });
+
+    it('redirige al login al abrir una pestaña sin sesión', () => {
+        navegacion.ruta = '/pages/Etiquetas';
+        navegacion.usuario = null;
+        render(<App />);
+
+        expect(screen.getByText('pagina-login')).toBeInTheDocument();
     });
 
     it('mantiene las rutas públicas fuera de los tabs', () => {

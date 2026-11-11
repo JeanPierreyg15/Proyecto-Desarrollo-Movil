@@ -41,12 +41,20 @@ Edita `.env` con la URL de la API según el entorno:
 > tu PC. En Android, el backend además debe escuchar en `0.0.0.0` y el firewall
 > debe permitir el puerto 8000.
 
+Para que Android permita al build de desarrollo llamar al backend local por
+HTTP, el manifiesto debe usar el placeholder
+`android:usesCleartextTraffic="${usesCleartextTraffic}"`. Define ese placeholder
+como `"true"` para `debug` y `"false"` para `release` en
+`android/app/build.gradle`; el proyecto Android está excluido de Git, así que
+hay que aplicar esta configuración localmente al crearlo o regenerarlo.
+
 ## Scripts
 
 | Comando | Descripción |
 |---------|-------------|
 | `npm run dev` | Servidor de desarrollo en `http://localhost:5173` |
 | `npm run build` | Build de producción en `dist/` (exige `VITE_API_URL` https) |
+| `npm run build:dev` | Build de desarrollo para Android (permite API local HTTP) |
 | `npm run preview` | Sirve el build localmente |
 | `npm run lint` | ESLint |
 | `npm run test` | Tests unitarios (Vitest) |
@@ -146,11 +154,27 @@ accesibilidad de `LinkCard` y el botón atrás de Android.
 
 ## Compilar para móvil (Capacitor)
 
+Para probar en el emulador Android con el backend local, configura en `.env`
+`VITE_API_URL=http://10.0.2.2:8000`, inicia el backend en el PC y ejecuta:
+
+```powershell
+npm run build:dev
+npm run cap:sync
+npm run android
+```
+
+Inicia el backend por separado desde su proyecto con
+`uvicorn main:app --reload --host 0.0.0.0 --port 8000`.
+`10.0.2.2` es la dirección del PC vista desde el emulador; en un teléfono físico
+usa la IP LAN del PC en `VITE_API_URL`.
+
+Para un build de producción, usa una URL HTTPS:
+
 ```bash
 $env:VITE_API_URL='https://api.tu-dominio.com'
-npm run build             # genera dist/ (exige https)
-npm run cap:sync          # copia dist/ a los proyectos nativos
-npm run android           # abre Android Studio
+npm run build
+npm run cap:sync
+npm run android
 ```
 
 ### Configuración por entorno

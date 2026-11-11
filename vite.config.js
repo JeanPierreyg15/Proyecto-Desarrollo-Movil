@@ -13,7 +13,7 @@ export default defineConfig(({ command, mode }) => {
         'VITE_API_URL es obligatoria para compilar: define la URL pública de la API (https).'
       );
     }
-    if (!apiUrl.startsWith('https://')) {
+    if (mode !== 'development' && !apiUrl.startsWith('https://')) {
       throw new Error(
         `VITE_API_URL debe usar https:// en un build de producción (valor actual: ${apiUrl}).`
       );
