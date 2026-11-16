@@ -2,7 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { IonModal, IonContent, IonInput, useIonToast } from '@ionic/react';
 import FilterButtons from './FilterButtons.jsx';
 import { linkService } from '../services/linkService.js';
-import { LONGITUD_MAXIMA_URL, dominioDeUrl, faviconDeUrl, normalizarUrl } from '../../../app/validaciones.js';
+import {
+    LONGITUD_MAXIMA_URL,
+    dominioDeUrl,
+    faviconDeUrl,
+    miniaturaYoutube,
+    normalizarUrl,
+} from '../../../app/validaciones.js';
 
 // Espera tras la última tecla antes de consultar la página (evita una
 // petición por cada carácter mientras se escribe la URL).
@@ -111,7 +117,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
               : [];
 
         setGuardando(true);
-        const datos = { titulo, url, tagIds };
+        const datos = { titulo, url, tagIds, imagen: miniatura };
         const resultado = editando
             ? await linkService.actualizar(link.id, datos)
             : await linkService.crear(datos);
@@ -139,8 +145,17 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
 
     const host = urlNormalizada ? dominioDeUrl(urlNormalizada) : '';
     const favicon = urlNormalizada ? faviconDeUrl(urlNormalizada) : null;
-    // La imagen de la página (og:image) tiene prioridad sobre el favicon.
-    const imagenPrevia = vistaPrevia?.imagen || favicon;
+    // Miniatura solo para contenido multimedia (YouTube, Vimeo, Spotify...).
+    // La de YouTube se conoce al instante; las demás llegan con la vista previa.
+    // Si se edita sin cambiar la URL, se conserva la que ya tenía el link.
+    const urlOriginal = editando ? normalizarUrl(link.url ?? '') : null;
+    const miniatura = urlNormalizada
+        ? vistaPrevia?.miniatura ||
+          miniaturaYoutube(urlNormalizada) ||
+          (!vistaPrevia && urlNormalizada === urlOriginal ? link.miniatura ?? null : null)
+        : null;
+    // En páginas normales se muestra solo el icono del sitio.
+    const imagenPrevia = miniatura || favicon;
 
     return (
         <IonModal
@@ -184,7 +199,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
                                 {imagenPrevia ? (
                                     <img
                                         key={imagenPrevia}
-                                        className={`previa-img ${vistaPrevia?.imagen ? 'previa-img--portada' : ''}`}
+                                        className={`previa-img ${miniatura ? 'previa-img--portada' : ''}`}
                                         src={imagenPrevia}
                                         alt=""
                                         width="60"

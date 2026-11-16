@@ -1,7 +1,11 @@
 # Locker — Frontend (Ionic + React)
 
 App móvil para guardar y organizar enlaces personales, con etiquetas, búsqueda,
-perfil y modo oscuro. Consume la API de `Backend-MovilLocker` (FastAPI).
+vista previa automática de los links (título y miniatura), perfil con foto y
+modo oscuro. Consume la API de `Backend-MovilLocker` (FastAPI).
+
+> Esta versión necesita el backend con los endpoints `/auth/foto` y
+> `/links/preview` (migraciones hasta `0007_imagen_links`).
 
 ## Tecnologías
 
@@ -81,33 +85,58 @@ hay que aplicar esta configuración localmente al crearlo o regenerarlo.
 - Cambio de contraseña real (`PUT /auth/password`) que invalida sesiones anteriores.
 
 ### Inicio (Mi Baúl)
-- Lista de enlaces con favicon, título, dominio, etiquetas y tiempo relativo
-  (`Intl.RelativeTimeFormat`).
+- Encabezado con el título y el avatar (iniciales o foto) a la derecha, que
+  lleva al Perfil. El estilo `.header-info` es común a las tres pestañas y vive
+  en `src/app/app.css`.
+- Lista de enlaces con imagen, título, dominio, etiquetas y tiempo relativo
+  (`Intl.RelativeTimeFormat`). Los links multimedia (YouTube, Vimeo, Spotify,
+  TikTok...) muestran su **miniatura** en 16:9; las páginas normales, solo el
+  **icono del sitio**. Los links de YouTube guardados antes de esta función
+  también muestran miniatura, porque se calcula del ID del video.
 - Abrir el enlace tocando la tarjeta: `@capacitor/browser` en móvil, pestaña nueva en web.
 - Menú de acciones: abrir, copiar, compartir, editar y eliminar. En móvil usa
   el portapapeles y el selector de compartir nativos de Capacitor.
 - Crear y editar links (con normalización de URLs).
+- **Vista previa automática (web scraping)**: al escribir o pegar una URL, tras
+  600 ms se consulta `GET /links/preview` y se autocompleta el título (sin pisar
+  uno escrito a mano), mostrando la miniatura o el icono, el sitio y la
+  descripción. La miniatura se guarda con el link.
 - Búsqueda por título, URL o etiqueta y filtros por etiqueta.
 - Scroll infinito por páginas de 50: ya no desaparecen los links a partir del
   101. El contador de la cabecera usa el total real del backend (`/links/count`).
 - Pull-to-refresh, skeletons, estado vacío y estado de error con “Reintentar”.
-- Datos recargados al entrar a la pestaña (`useIonViewWillEnter`).
+- Datos recargados al entrar a la pestaña (`useIonViewWillEnter`) y, además,
+  al instante cuando cambian etiquetas o links en otra pestaña (ver
+  *Sincronización entre pestañas*).
 - Botón atrás de Android: desde Etiquetas/Perfil vuelve a Inicio y desde Inicio
   minimiza la app en vez de cerrarla de golpe.
 
 ### Etiquetas
-- Crear etiqueta con nombre e icono elegido por el usuario.
+- Crear etiqueta con nombre e icono elegido por el usuario. La lista se
+  actualiza al momento con la respuesta del servidor, sin recargar ni mostrar
+  el skeleton.
 - Ver links de la etiqueta, renombrar/cambiar icono y eliminar.
 - Conteo de links por etiqueta calculado en el backend (`links_count`), no a
-  partir de los primeros 100 links. Recarga al entrar a la pestaña.
+  partir de los primeros 100 links. Se refresca solo al crear, editar o borrar links.
 
 ### Perfil
-- Avatar con iniciales y selector de color persistido en el backend.
+- **Foto de perfil**: botón de cámara sobre el avatar para subir, cambiar o
+  quitar la foto. Se recorta al centro y se reduce a 256×256 JPEG en el
+  dispositivo (`src/app/imagenes.js`) antes de enviarla a `PUT /auth/foto`.
+- Sin foto, avatar con iniciales y selector de color persistido en el backend.
 - Edición de nombre y bio (el correo no se puede cambiar en esta versión).
-- Estadísticas reales de links y etiquetas.
+- Estadísticas reales de links y etiquetas, actualizadas solas ante cualquier cambio.
 - Modo oscuro persistido (Preferences en nativo, `localStorage` en web) y barra
   de estado ajustada al tema.
 - Cerrar sesión y eliminar cuenta (con confirmación de contraseña).
+
+### Sincronización entre pestañas
+Las pestañas de Ionic quedan montadas en memoria, así que una pestaña no se
+entera sola de lo que cambia en otra. `src/app/eventos.js` es un bus de eventos
+mínimo: `tagService` emite `ETIQUETAS_CAMBIADAS` y `linkService` emite
+`LINKS_CAMBIADOS` tras cada creación, edición o borrado. Inicio, Etiquetas y
+Perfil se suscriben con `escuchar()` y recargan en segundo plano, sin tener que
+refrescar la página.
 
 ## Estructura
 
@@ -120,7 +149,10 @@ src/
 │   ├── apiClient.js         # fetch central, timeout 15 s y manejo de 401
 │   ├── almacenamiento.js    # Token y perfil en almacén seguro (localStorage en web)
 │   ├── enlaces.js           # Abrir, copiar y compartir enlaces
-│   ├── validaciones.js      # Email, contraseña, URLs, tiempo relativo
+│   ├── eventos.js           # Bus de eventos entre pestañas (etiquetas / links)
+│   ├── imagenes.js          # Recorte y reducción de la foto de perfil
+│   ├── validaciones.js      # Email, contraseña, URLs, favicon, miniatura de YouTube, tiempo relativo
+│   ├── app.css              # Tema, encabezado común, skeletons y estados vacíos
 │   └── theme.js             # Modo oscuro + barra de estado
 └── features/
     ├── auth/
@@ -148,9 +180,20 @@ Los tests cubren las utilidades compartidas (validaciones, URLs, contraseñas),
 la apertura de enlaces, el portapapeles y el selector nativo, el cliente HTTP y
 los errores 401, la restauración de sesión con y sin red, el registro, la
 recuperación de contraseña, el almacenamiento seguro y su migración, el
-formulario de links, las rutas de `/pages`, la lista de enlaces (refresco
-silencioso, carreras y filtros), las etiquetas (error y paginación), la
-accesibilidad de `LinkCard` y el botón atrás de Android.
+formulario de links (incluido el autocompletado del título por la vista previa,
+que no pisa un título escrito a mano, y el guardado de la miniatura de YouTube),
+las rutas de `/pages`, la lista de enlaces (refresco silencioso, carreras y
+filtros), las etiquetas (error y paginación), la accesibilidad de `LinkCard` y
+el botón atrás de Android (68 tests).
+
+> Si Vitest falla con `Failed to resolve import "@testing-library/jest-dom/vitest"`,
+> falta instalar dependencias: ejecuta `npm install`.
+
+### Ver la app como en un celular
+
+Con `npm run dev` corriendo, abre `http://localhost:5173` en Chrome, pulsa
+**F12** y luego **Ctrl+Shift+M** para el modo dispositivo (por ejemplo,
+iPhone 14 o Pixel 7).
 
 ## Compilar para móvil (Capacitor)
 

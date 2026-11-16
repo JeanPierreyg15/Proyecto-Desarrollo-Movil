@@ -59,6 +59,24 @@
     flex-shrink: 0;
 }
 
+/* Miniatura de video/música: 16:9, recortada y sin el relleno del icono. */
+.card img.card-img--miniatura{
+    width:160px;
+    height:90px;
+    padding:0;
+    object-fit:cover;
+    border-radius:8px;
+    align-self:center;
+    background-color:#000;
+}
+
+@media (max-width: 360px){
+    .card img.card-img--miniatura{
+        width:128px;
+        height:72px;
+    }
+}
+
 .card-menu{
     position:absolute;
     top:8px;

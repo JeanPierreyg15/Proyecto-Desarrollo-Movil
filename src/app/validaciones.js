@@ -95,6 +95,35 @@ export function faviconDeUrl(valor = '') {
     return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=64`;
 }
 
+/**
+ * Miniatura por defecto de un video de YouTube (watch, youtu.be, shorts, embed,
+ * live). Se calcula sin red, así que sirve también para links ya guardados.
+ */
+export function miniaturaYoutube(valor = '') {
+    let url;
+    try {
+        const texto = String(valor).trim();
+        url = new URL(/^https?:\/\//i.test(texto) ? texto : `https://${texto}`);
+    } catch {
+        return null;
+    }
+    const host = url.hostname.toLowerCase().replace(/^(www\.|m\.)/, '');
+    let id = null;
+    if (host === 'youtu.be') {
+        id = url.pathname.split('/')[1];
+    } else if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+        if (url.pathname === '/watch') {
+            id = url.searchParams.get('v');
+        } else {
+            const [tipo, candidato] = url.pathname.split('/').filter(Boolean);
+            if (['shorts', 'embed', 'live', 'v'].includes(tipo)) {
+                id = candidato;
+            }
+        }
+    }
+    return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+}
+
 export function obtenerIniciales(nombre = '') {
     const letras = nombre
         .trim()

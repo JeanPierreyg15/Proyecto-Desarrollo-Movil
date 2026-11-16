@@ -13,6 +13,7 @@ import { EVENTOS, emitir } from '../../../app/eventos.js';
 import {
     dominioDeUrl,
     faviconDeUrl,
+    miniaturaYoutube,
     normalizarUrl,
     tiempoRelativo,
 } from '../../../app/validaciones.js';
@@ -21,12 +22,18 @@ import {
 function mapearLink(linkApi) {
     const url = linkApi.url ?? '';
     const tags = linkApi.tags ?? [];
+    // Miniatura guardada (videos, música...) o, para links de YouTube
+    // guardados antes de esta función, la calculada a partir del ID.
+    const miniatura = linkApi.imagen || miniaturaYoutube(url);
     return {
         id: linkApi.id,
         titulo: linkApi.titulo ?? '',
         url,
         dominio: dominioDeUrl(url),
-        imagen: faviconDeUrl(url),
+        miniatura: miniatura || null,
+        favicon: faviconDeUrl(url),
+        // Lo que muestra la tarjeta: la miniatura si existe; si no, el icono.
+        imagen: miniatura || faviconDeUrl(url),
         tiempo: tiempoRelativo(linkApi.created_at),
         creadoEn: linkApi.created_at ?? null,
         etiquetas: tags.map((tag) => tag.nombre),
@@ -34,7 +41,7 @@ function mapearLink(linkApi) {
     };
 }
 
-function prepararDatos({ titulo, url, tagIds = [] }) {
+function prepararDatos({ titulo, url, tagIds = [], imagen = null }) {
     const urlNormalizada = normalizarUrl(url);
     if (!urlNormalizada) {
         return { ok: false, mensaje: 'Ingresa un enlace válido (http o https).' };
@@ -44,7 +51,7 @@ function prepararDatos({ titulo, url, tagIds = [] }) {
     }
     return {
         ok: true,
-        datos: { url: urlNormalizada, titulo: titulo.trim(), tag_ids: tagIds },
+        datos: { url: urlNormalizada, titulo: titulo.trim(), tag_ids: tagIds, imagen: imagen || null },
     };
 }
 
@@ -90,6 +97,7 @@ export const linkService = {
                 descripcion: datos.descripcion ?? null,
                 imagen: datos.imagen ?? null,
                 sitio: datos.sitio ?? null,
+                miniatura: datos.miniatura ?? null,
             },
         };
     },

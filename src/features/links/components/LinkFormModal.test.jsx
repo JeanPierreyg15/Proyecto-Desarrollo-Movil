@@ -87,6 +87,7 @@ describe('LinkFormModal', () => {
             url: 'https://a.com',
             titulo: 'A',
             tagIds: [3, 4],
+            imagen: null,
         });
     });
 
@@ -112,6 +113,24 @@ describe('LinkFormModal', () => {
             url: 'https://b.com',
             titulo: 'B',
             tagIds: [3, 4],
+            imagen: null,
         });
+    });
+
+    it('guarda la miniatura de YouTube y en páginas normales no guarda imagen', async () => {
+        render(
+            <LinkFormModal
+                isOpen
+                cerrarModal={vi.fn()}
+                etiquetas={[]}
+                link={{ id: 9, url: 'https://youtu.be/dQw4w9WgXcQ', titulo: 'Video', tagIds: [] }}
+                onGuardado={vi.fn()}
+            />
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(actualizar).toHaveBeenCalledTimes(1));
+        expect(actualizar.mock.calls[0][1].imagen).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg');
     });
 });

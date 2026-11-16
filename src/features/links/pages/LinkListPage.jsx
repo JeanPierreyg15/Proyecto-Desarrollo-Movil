@@ -469,6 +469,7 @@ const Home = () => {
                                 titulo={link.titulo}
                                 url={link.url}
                                 imagen={link.imagen}
+                                esMiniatura={Boolean(link.miniatura)}
                                 tiempo={link.tiempo}
                                 etiquetas={link.etiquetas}
                                 onAbrir={() => manejarAbrir(link)}
