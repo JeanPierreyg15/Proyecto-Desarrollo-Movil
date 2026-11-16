@@ -9,12 +9,15 @@ import {
     IonButton,
     IonIcon,
     IonToggle,
+    IonSpinner,
     useIonToast,
     useIonRouter,
     useIonAlert,
+    useIonActionSheet,
     useIonViewWillEnter,
 } from '@ionic/react';
 import {
+    cameraOutline,
     personOutline,
     lockClosedOutline,
     logOutOutline,
@@ -27,6 +30,8 @@ import { useAuth } from '../../auth/context/AuthContext.jsx';
 import { aplicarTema } from '../../../app/theme.js';
 import { linkService } from '../../links/services/linkService.js';
 import { tagService } from '../../tags/services/tagService.js';
+import { EVENTOS, escuchar } from '../../../app/eventos.js';
+import { prepararFotoPerfil } from '../../../app/imagenes.js';
 import './ProfilePage.css';
 
 const COLORES_AVATAR = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0891b2', '#475569'];
@@ -42,7 +47,18 @@ const NOMBRES_COLOR = {
 };
 
 function Perfil() {
-    const { usuario, actualizarPerfil, actualizarAvatar, eliminarCuenta, cerrarSesion } = useAuth();
+    const {
+        usuario,
+        actualizarPerfil,
+        actualizarAvatar,
+        actualizarFoto,
+        eliminarFoto,
+        eliminarCuenta,
+        cerrarSesion,
+    } = useAuth();
+    const [subiendoFoto, setSubiendoFoto] = useState(false);
+    const inputFotoRef = useRef(null);
+    const [presentarAcciones] = useIonActionSheet();
     const [nombre, setNombre] = useState(usuario?.nombre ?? '');
     const [bio, setBio] = useState(usuario?.bio ?? '');
     const [oscuro, setOscuro] = useState(() =>
@@ -93,6 +109,16 @@ function Perfil() {
         cargarEstadisticas();
     });
 
+    // Los contadores se actualizan solos cuando cambian links o etiquetas.
+    useEffect(() => {
+        const dejarLinks = escuchar(EVENTOS.LINKS_CAMBIADOS, cargarEstadisticas);
+        const dejarEtiquetas = escuchar(EVENTOS.ETIQUETAS_CAMBIADAS, cargarEstadisticas);
+        return () => {
+            dejarLinks();
+            dejarEtiquetas();
+        };
+    }, [cargarEstadisticas]);
+
     useEffect(() => {
         setNombre(usuario?.nombre ?? '');
         setBio(usuario?.bio ?? '');
@@ -122,6 +148,54 @@ function Perfil() {
         }
         const resultado = await actualizarAvatar({ avatarColor: color });
         avisar(resultado.ok ? 'Color del avatar actualizado.' : resultado.mensaje, resultado.ok ? 'success' : 'danger');
+    };
+
+    const elegirFoto = () => {
+        inputFotoRef.current?.click();
+    };
+
+    const manejarArchivoFoto = async (evento) => {
+        const archivo = evento.target.files?.[0];
+        // Se limpia para poder volver a elegir el mismo archivo.
+        evento.target.value = '';
+        if (!archivo) {
+            return;
+        }
+        setSubiendoFoto(true);
+        const preparada = await prepararFotoPerfil(archivo);
+        if (!preparada.ok) {
+            setSubiendoFoto(false);
+            avisar(preparada.mensaje, 'danger');
+            return;
+        }
+        const resultado = await actualizarFoto(preparada.datos);
+        setSubiendoFoto(false);
+        avisar(resultado.ok ? 'Foto de perfil actualizada.' : resultado.mensaje, resultado.ok ? 'success' : 'danger');
+    };
+
+    const quitarFoto = async () => {
+        setSubiendoFoto(true);
+        const resultado = await eliminarFoto();
+        setSubiendoFoto(false);
+        avisar(resultado.ok ? 'Foto de perfil eliminada.' : resultado.mensaje, resultado.ok ? 'success' : 'danger');
+    };
+
+    const manejarBotonFoto = () => {
+        if (subiendoFoto) {
+            return;
+        }
+        if (!usuario?.foto) {
+            elegirFoto();
+            return;
+        }
+        presentarAcciones({
+            header: 'Foto de perfil',
+            buttons: [
+                { text: 'Cambiar foto', handler: elegirFoto },
+                { text: 'Quitar foto', role: 'destructive', handler: quitarFoto },
+                { text: 'Cancelar', role: 'cancel' },
+            ],
+        });
     };
 
     const manejarCerrarSesion = () => {
@@ -211,13 +285,43 @@ function Perfil() {
                     {/* Avatar */}
                     <section className="perfil-avatar animar-entrada" aria-label="Información del perfil">
                         <div className="avatar-container">
-                            <div
-                                className="avatar-grande"
-                                style={{ backgroundColor: colorAvatar }}
-                                aria-label={`Iniciales de ${usuario.nombre}`}
+                            {usuario.foto ? (
+                                <img
+                                    className="avatar-grande avatar-grande--foto"
+                                    src={usuario.foto}
+                                    alt={`Foto de perfil de ${usuario.nombre}`}
+                                />
+                            ) : (
+                                <div
+                                    className="avatar-grande"
+                                    style={{ backgroundColor: colorAvatar }}
+                                    aria-label={`Iniciales de ${usuario.nombre}`}
+                                >
+                                    {usuario.iniciales}
+                                </div>
+                            )}
+                            {subiendoFoto && (
+                                <div className="avatar-cargando" aria-hidden="true">
+                                    <IonSpinner name="crescent" />
+                                </div>
+                            )}
+                            <IonButton
+                                className="avatar-edit"
+                                type="button"
+                                aria-label={usuario.foto ? 'Cambiar o quitar la foto de perfil' : 'Subir foto de perfil'}
+                                disabled={subiendoFoto}
+                                onClick={manejarBotonFoto}
                             >
-                                {usuario.iniciales}
-                            </div>
+                                <IonIcon icon={cameraOutline} aria-hidden="true" />
+                            </IonButton>
+                            <input
+                                ref={inputFotoRef}
+                                type="file"
+                                accept="image/*"
+                                hidden
+                                onChange={manejarArchivoFoto}
+                                data-testid="input-foto-perfil"
+                            />
                         </div>
                         <h2>{usuario.nombre}</h2>
                         <p className="perfil-correo">{usuario.correo}</p>

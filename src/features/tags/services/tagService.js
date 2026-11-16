@@ -3,8 +3,12 @@
 //   POST   /tags/       -> crear etiqueta { nombre, icono }
 //   PUT    /tags/{id}   -> renombrar / cambiar icono
 //   DELETE /tags/{id}   -> eliminar etiqueta (los links se conservan)
+//
+// Cada cambio emite EVENTOS.ETIQUETAS_CAMBIADAS para que Inicio y Perfil se
+// actualicen sin tener que refrescar la página.
 
 import { apiRequest } from '../../../app/apiClient.js';
+import { EVENTOS, emitir } from '../../../app/eventos.js';
 
 const ICONO_POR_DEFECTO = '🏷️';
 
@@ -50,7 +54,9 @@ export const tagService = {
         if (!resultado.ok) {
             return resultado;
         }
-        return { ok: true, datos: mapearEtiqueta(resultado.datos) };
+        const etiqueta = mapearEtiqueta(resultado.datos);
+        emitir(EVENTOS.ETIQUETAS_CAMBIADAS, { tipo: 'creada', etiqueta });
+        return { ok: true, datos: etiqueta };
     },
 
     async actualizar(id, { nombre, icono } = {}) {
@@ -64,7 +70,9 @@ export const tagService = {
         if (!resultado.ok) {
             return resultado;
         }
-        return { ok: true, datos: mapearEtiqueta(resultado.datos) };
+        const etiqueta = mapearEtiqueta(resultado.datos);
+        emitir(EVENTOS.ETIQUETAS_CAMBIADAS, { tipo: 'actualizada', etiqueta });
+        return { ok: true, datos: etiqueta };
     },
 
     async eliminar(id) {
@@ -72,6 +80,7 @@ export const tagService = {
         if (!resultado.ok) {
             return resultado;
         }
+        emitir(EVENTOS.ETIQUETAS_CAMBIADAS, { tipo: 'eliminada', id });
         return { ok: true };
     },
 };

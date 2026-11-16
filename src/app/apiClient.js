@@ -40,6 +40,7 @@ const CAMPOS_ES = {
     tag_ids: 'etiquetas',
     token: 'código de recuperación',
     icono: 'icono',
+    imagen: 'imagen',
 };
 
 function nombreCampo(loc = []) {

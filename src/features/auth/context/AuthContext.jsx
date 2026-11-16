@@ -106,6 +106,28 @@ export function AuthProvider({ children }) {
         return resultado;
     }, [usuario]);
 
+    const actualizarFoto = useCallback(async (imagen) => {
+        if (!usuario) {
+            return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
+        }
+        const resultado = await authService.actualizarFoto(imagen);
+        if (resultado.ok) {
+            setUsuario(resultado.usuario);
+        }
+        return resultado;
+    }, [usuario]);
+
+    const eliminarFoto = useCallback(async () => {
+        if (!usuario) {
+            return { ok: false, mensaje: 'Inicia sesión para editar tu perfil' };
+        }
+        const resultado = await authService.eliminarFoto();
+        if (resultado.ok) {
+            setUsuario(resultado.usuario);
+        }
+        return resultado;
+    }, [usuario]);
+
     const cambiarPassword = useCallback(async ({ passwordActual, passwordNueva }) => {
         return authService.cambiarPassword({ passwordActual, passwordNueva });
     }, []);
@@ -142,6 +164,8 @@ export function AuthProvider({ children }) {
                 restablecerPassword,
                 actualizarPerfil,
                 actualizarAvatar,
+                actualizarFoto,
+                eliminarFoto,
                 cambiarPassword,
                 eliminarCuenta,
                 cerrarSesion,

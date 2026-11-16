@@ -22,6 +22,7 @@ export function mapearUsuario(usuarioApi) {
         correo: usuarioApi.email,
         avatarColor: usuarioApi.avatar_color ?? '#2563eb',
         bio: usuarioApi.bio ?? '',
+        foto: usuarioApi.avatar_imagen ?? null,
         iniciales: obtenerIniciales(usuarioApi.nombre),
     };
 }
@@ -149,6 +150,30 @@ export const authService = {
             metodo: 'PUT',
             datos: { avatar_color: avatarColor },
         });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        const usuario = mapearUsuario(resultado.datos);
+        await guardarUsuario(usuario);
+        return { ok: true, usuario };
+    },
+
+    /** Sube la foto de perfil (data URL ya reducida con prepararFotoPerfil). */
+    async actualizarFoto(imagen) {
+        const resultado = await apiRequest('/auth/foto', {
+            metodo: 'PUT',
+            datos: { imagen },
+        });
+        if (!resultado.ok) {
+            return { ok: false, mensaje: resultado.mensaje };
+        }
+        const usuario = mapearUsuario(resultado.datos);
+        await guardarUsuario(usuario);
+        return { ok: true, usuario };
+    },
+
+    async eliminarFoto() {
+        const resultado = await apiRequest('/auth/foto', { metodo: 'DELETE' });
         if (!resultado.ok) {
             return { ok: false, mensaje: resultado.mensaje };
         }

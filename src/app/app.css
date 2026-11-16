@@ -29,6 +29,31 @@ html, body, #root {
   height: 100%;
 }
 
+/* ===== Encabezado común de las pestañas (Inicio, Etiquetas, Perfil) =====
+   Antes cada página lo definía distinto y, como el CSS es global, el padding
+   de Perfil acababa moviendo el encabezado de Inicio. */
+.header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+}
+
+.header-info h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: left;
+}
+
+.header-info p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: normal;
+  text-align: left;
+  color: var(--app-text-muted);
+}
+
 /* ===== Animaciones ===== */
 @keyframes aparecer-subiendo {
   from {

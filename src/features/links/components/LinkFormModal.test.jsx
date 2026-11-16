@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actualizar = vi.fn();
+const previsualizar = vi.fn();
 
 vi.mock('@ionic/react', () => ({
     IonModal: ({ isOpen, children }) => (isOpen ? <div>{children}</div> : null),
@@ -20,6 +21,7 @@ vi.mock('@ionic/react', () => ({
 vi.mock('../services/linkService.js', () => ({
     linkService: {
         actualizar: (...args) => actualizar(...args),
+        previsualizar: (...args) => previsualizar(...args),
         crear: vi.fn(),
     },
 }));
@@ -32,6 +34,33 @@ describe('LinkFormModal', () => {
     beforeEach(() => {
         actualizar.mockReset();
         actualizar.mockResolvedValue({ ok: true, datos: {} });
+        previsualizar.mockReset();
+        previsualizar.mockResolvedValue({ ok: false, mensaje: 'sin red' });
+    });
+
+    it('autocompleta el título con la vista previa al escribir una URL', async () => {
+        previsualizar.mockResolvedValue({
+            ok: true,
+            datos: { titulo: 'GitHub', descripcion: 'Donde vive el código', imagen: null, sitio: 'GitHub' },
+        });
+        render(<LinkFormModal isOpen cerrarModal={vi.fn()} etiquetas={[]} onGuardado={vi.fn()} />);
+
+        fireEvent.change(screen.getByLabelText('https://...'), { target: { value: 'github.com' } });
+
+        await waitFor(() => expect(screen.getByLabelText('Ej: Mi portafolio')).toHaveValue('GitHub'));
+        expect(previsualizar).toHaveBeenCalledWith('https://github.com');
+        expect(screen.getByText('Donde vive el código')).toBeInTheDocument();
+    });
+
+    it('no pisa un título que la persona ya escribió', async () => {
+        previsualizar.mockResolvedValue({ ok: true, datos: { titulo: 'Sugerido' } });
+        render(<LinkFormModal isOpen cerrarModal={vi.fn()} etiquetas={[]} onGuardado={vi.fn()} />);
+
+        fireEvent.change(screen.getByLabelText('Ej: Mi portafolio'), { target: { value: 'Mi título' } });
+        fireEvent.change(screen.getByLabelText('https://...'), { target: { value: 'ejemplo.com' } });
+
+        await waitFor(() => expect(previsualizar).toHaveBeenCalled());
+        expect(screen.getByLabelText('Ej: Mi portafolio')).toHaveValue('Mi título');
     });
 
     it('conserva los ids originales al editar si las etiquetas no cargaron', async () => {
