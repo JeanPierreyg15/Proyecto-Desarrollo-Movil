@@ -1,23 +1,4 @@
-.header-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 16px;
-}
-
-.header-info h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: bold;
-    text-align: left;
-}
-
-.header-info p {
-    margin: 0;
-    font-size: 10px;
-    font-weight: normal;
-    text-align: left;
-}
+/* El estilo de .header-info es común a todas las pestañas: vive en app.css. */
 
 .perfil-content {
     --padding-bottom: 40px;
@@ -61,14 +42,39 @@
     font-weight: 700;
 }
 
+.avatar-grande--foto {
+    object-fit: cover;
+    background-color: var(--app-surface-soft);
+}
+
+.avatar-cargando {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 24px;
+    background: rgba(17, 24, 39, 0.45);
+    color: #ffffff;
+}
+
+.avatar-cargando ion-spinner {
+    color: #ffffff;
+}
+
 .avatar-edit {
+    margin: 0;
     position: absolute;
     right: -8px;
     bottom: -8px;
-    width: 36px;
-    height: 36px;
+    /* ion-button trae alto y relleno propios: sin fijarlos todos queda ovalado. */
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
     --padding-start: 0;
     --padding-end: 0;
+    --padding-top: 0;
+    --padding-bottom: 0;
     --border-radius: 50%;
     --background: var(--app-surface);
     --color: #2563eb;

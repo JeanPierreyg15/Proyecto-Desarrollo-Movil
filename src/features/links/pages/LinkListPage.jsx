@@ -30,6 +30,7 @@ import { useAuth } from '../../auth/context/AuthContext.jsx';
 import { linkService } from '../services/linkService.js';
 import { tagService } from '../../tags/services/tagService.js';
 import { abrirEnlace, compartirEnlace, copiarEnlace } from '../../../app/enlaces.js';
+import { EVENTOS, escuchar } from '../../../app/eventos.js';
 
 const TAMANO_PAGINA = 50;
 
@@ -185,6 +186,22 @@ const Home = () => {
         cargarDatos(linksRef.current.length > 0);
     });
 
+    // Una etiqueta creada, renombrada o borrada en la pestaña Etiquetas se
+    // refleja aquí al momento (filtros, selector del modal y nombres en las
+    // tarjetas), sin tener que refrescar la página.
+    useEffect(
+        () => escuchar(EVENTOS.ETIQUETAS_CAMBIADAS, () => cargarDatos(true)),
+        [cargarDatos]
+    );
+
+    /** Solo las etiquetas: se usa al abrir el modal para no mostrar una lista vieja. */
+    const refrescarEtiquetas = useCallback(async () => {
+        const resultado = await tagService.listar();
+        if (resultado.ok) {
+            setEtiquetas(resultado.datos);
+        }
+    }, []);
+
     // Permite llegar desde Etiquetas con ?etiquetaId=... (o el nombre antiguo).
     useEffect(() => {
         const parametros = new URLSearchParams(location.search);
@@ -299,11 +316,13 @@ const Home = () => {
     const abrirCrear = () => {
         setLinkEditar(null);
         setMostrarModal(true);
+        refrescarEtiquetas();
     };
 
     const abrirEditar = (link) => {
         setLinkEditar(link);
         setMostrarModal(true);
+        refrescarEtiquetas();
     };
 
     const cerrarModal = () => {
@@ -354,15 +373,22 @@ const Home = () => {
                         <h1>Mi Baúl</h1>
                         <p>{totalLinks} {totalLinks === 1 ? 'link guardado' : 'links guardados'}</p>
                     </div>
-                    <button
-                        type="button"
-                        className="avatar"
-                        aria-label="Ir a mi perfil"
-                        style={{ backgroundColor: usuario?.avatarColor ?? '#2563eb' }}
-                        onClick={() => router.push('/pages/Perfil', 'forward', 'push')}
-                    >
-                        <span>{usuario?.iniciales ?? '?'}</span>
-                    </button>
+                    {/* slot="end": el avatar queda a la derecha del título, no debajo. */}
+                    <div slot="end" className="header-acciones">
+                        <button
+                            type="button"
+                            className="avatar"
+                            aria-label="Ir a mi perfil"
+                            style={{ backgroundColor: usuario?.avatarColor ?? '#2563eb' }}
+                            onClick={() => router.push('/pages/Perfil', 'forward', 'push')}
+                        >
+                            {usuario?.foto ? (
+                                <img className="avatar-foto" src={usuario.foto} alt="" />
+                            ) : (
+                                <span>{usuario?.iniciales ?? '?'}</span>
+                            )}
+                        </button>
+                    </div>
                 </IonToolbar>
             </IonHeader>
             <IonContent className="ion-padding">
@@ -443,6 +469,7 @@ const Home = () => {
                                 titulo={link.titulo}
                                 url={link.url}
                                 imagen={link.imagen}
+                                esMiniatura={Boolean(link.miniatura)}
                                 tiempo={link.tiempo}
                                 etiquetas={link.etiquetas}
                                 onAbrir={() => manejarAbrir(link)}

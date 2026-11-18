@@ -1,37 +1,33 @@
-.header-info{
+/* El estilo de .header-info es común a todas las pestañas: vive en app.css. */
+
+.header-acciones{
     display:flex;
-    flex-direction:column;
-    gap:4px;
-}
-
-.header-info h1{
-    margin:0;
-    font-size:20px;
-    font-weight:bold;
-    text-align:left;
-}
-
-.header-info p{
-    margin:0;
-    font-size:10px;
-    font-weight:normal;
-    text-align:left;
+    align-items:center;
 }
 
 .avatar{
     display:flex;
     justify-content:center;
     align-items:center;
-    border-radius:20px;
+    border-radius:50%;
     border:none;
+    padding:0;
     width:40px;
     height:40px;
-    background-color:blue;
+    overflow:hidden;
+    background-color:#2563eb;
     color:white;
     cursor:pointer;
     font-size:15px;
     font-weight:700;
     flex-shrink:0;
+}
+
+.avatar-foto{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
 }
 
 .avatar:focus-visible{
@@ -64,8 +60,8 @@
 }
 
 .header {
-    --padding-start: 0px; 
-    --padding-end: 16px;   
+    --padding-start: 0px;
+    --padding-end: 16px;
 }
 
 .list-card{
@@ -221,9 +217,34 @@
     font-weight: bold;
 }
 
+.previa-info{
+    min-width: 0;
+}
+
+.previa-info h4{
+    margin: 0;
+}
+
 .previa-info p{
     color: var(--app-text-muted);
-    margin-top: 4px;
+    margin: 4px 0 0;
+    font-size: 12px;
+}
+
+.previa-img--portada{
+    object-fit: cover;
+    padding: 0;
+}
+
+.previa-descripcion{
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.previa-estado{
+    font-style: italic;
 }
 
 .searchBar {

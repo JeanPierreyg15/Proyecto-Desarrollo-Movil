@@ -1,15 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { IonModal, IonContent, IonInput, useIonToast } from '@ionic/react';
 import FilterButtons from './FilterButtons.jsx';
 import { linkService } from '../services/linkService.js';
-import { LONGITUD_MAXIMA_URL, dominioDeUrl, faviconDeUrl, normalizarUrl } from '../../../app/validaciones.js';
+import {
+    LONGITUD_MAXIMA_URL,
+    dominioDeUrl,
+    faviconDeUrl,
+    miniaturaYoutube,
+    normalizarUrl,
+} from '../../../app/validaciones.js';
+
+// Espera tras la última tecla antes de consultar la página (evita una
+// petición por cada carácter mientras se escribe la URL).
+const ESPERA_VISTA_PREVIA_MS = 600;
 
 const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null }) => {
     const [url, setUrl] = useState('');
     const [titulo, setTitulo] = useState('');
     const [etiquetasSeleccionadas, setEtiquetasSeleccionadas] = useState([]);
     const [guardando, setGuardando] = useState(false);
+    const [vistaPrevia, setVistaPrevia] = useState(null);
+    const [buscandoVista, setBuscandoVista] = useState(false);
     const [mostrarToast] = useIonToast();
+    // Último título puesto automáticamente: si la persona no lo ha tocado, se
+    // puede reemplazar al cambiar la URL; si lo editó, se respeta.
+    const tituloAutomaticoRef = useRef(null);
+    const tituloRef = useRef('');
+    tituloRef.current = titulo;
 
     const editando = Boolean(link);
 
@@ -30,7 +47,45 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
             setEtiquetasSeleccionadas([]);
         }
         setGuardando(false);
+        setVistaPrevia(null);
+        tituloAutomaticoRef.current = null;
     }, [isOpen, link]);
+
+    const urlNormalizada = normalizarUrl(url);
+
+    // Web scraping: al escribir o pegar una URL válida se piden al backend el
+    // título, la descripción y la imagen de la página, y se autocompleta el título.
+    useEffect(() => {
+        if (!isOpen || !urlNormalizada) {
+            setVistaPrevia(null);
+            setBuscandoVista(false);
+            return undefined;
+        }
+        let vigente = true;
+        setBuscandoVista(true);
+        const temporizador = setTimeout(async () => {
+            const resultado = await linkService.previsualizar(urlNormalizada);
+            if (!vigente) {
+                return;
+            }
+            setBuscandoVista(false);
+            if (!resultado?.ok) {
+                setVistaPrevia(null);
+                return;
+            }
+            setVistaPrevia(resultado.datos);
+            const sugerido = resultado.datos.titulo;
+            const actual = tituloRef.current.trim();
+            if (sugerido && (!actual || actual === tituloAutomaticoRef.current)) {
+                tituloAutomaticoRef.current = sugerido;
+                setTitulo(sugerido);
+            }
+        }, ESPERA_VISTA_PREVIA_MS);
+        return () => {
+            vigente = false;
+            clearTimeout(temporizador);
+        };
+    }, [isOpen, urlNormalizada]);
 
     const manejarSeleccion = (etiquetaClic) => {
         if (etiquetaClic === null) {
@@ -62,7 +117,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
               : [];
 
         setGuardando(true);
-        const datos = { titulo, url, tagIds };
+        const datos = { titulo, url, tagIds, imagen: miniatura };
         const resultado = editando
             ? await linkService.actualizar(link.id, datos)
             : await linkService.crear(datos);
@@ -88,9 +143,19 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
         cerrar();
     };
 
-    const urlNormalizada = normalizarUrl(url);
     const host = urlNormalizada ? dominioDeUrl(urlNormalizada) : '';
     const favicon = urlNormalizada ? faviconDeUrl(urlNormalizada) : null;
+    // Miniatura solo para contenido multimedia (YouTube, Vimeo, Spotify...).
+    // La de YouTube se conoce al instante; las demás llegan con la vista previa.
+    // Si se edita sin cambiar la URL, se conserva la que ya tenía el link.
+    const urlOriginal = editando ? normalizarUrl(link.url ?? '') : null;
+    const miniatura = urlNormalizada
+        ? vistaPrevia?.miniatura ||
+          miniaturaYoutube(urlNormalizada) ||
+          (!vistaPrevia && urlNormalizada === urlOriginal ? link.miniatura ?? null : null)
+        : null;
+    // En páginas normales se muestra solo el icono del sitio.
+    const imagenPrevia = miniatura || favicon;
 
     return (
         <IonModal
@@ -130,14 +195,16 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
                             />
                         </div>
                         {urlNormalizada ? (
-                            <div className="tarjeta-previa">
-                                {favicon ? (
+                            <div className="tarjeta-previa" aria-busy={buscandoVista}>
+                                {imagenPrevia ? (
                                     <img
-                                        className="previa-img"
-                                        src={favicon}
+                                        key={imagenPrevia}
+                                        className={`previa-img ${miniatura ? 'previa-img--portada' : ''}`}
+                                        src={imagenPrevia}
                                         alt=""
                                         width="60"
                                         height="60"
+                                        referrerPolicy="no-referrer"
                                         onError={(evento) => {
                                             evento.currentTarget.style.visibility = 'hidden';
                                         }}
@@ -147,7 +214,13 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
                                 )}
                                 <div className="previa-info">
                                     <h4>{titulo.trim() || 'Sin título'}</h4>
-                                    <p>{host}</p>
+                                    <p>{vistaPrevia?.sitio || host}</p>
+                                    {vistaPrevia?.descripcion ? (
+                                        <p className="previa-descripcion">{vistaPrevia.descripcion}</p>
+                                    ) : null}
+                                    {buscandoVista ? (
+                                        <p className="previa-estado" role="status">Obteniendo información de la página...</p>
+                                    ) : null}
                                 </div>
                             </div>
                         ) : (

@@ -1,7 +1,7 @@
 import React from 'react';
 import './LinkCard.css';
 
-const LinkCard = ({ titulo, url, imagen, tiempo, etiquetas, onAbrir, onAcciones }) => {
+const LinkCard = ({ titulo, url, imagen, esMiniatura = false, tiempo, etiquetas, onAbrir, onAcciones }) => {
     return (
         <article className="card animar-entrada">
             <button
@@ -14,9 +14,11 @@ const LinkCard = ({ titulo, url, imagen, tiempo, etiquetas, onAbrir, onAcciones 
                     <img
                         src={imagen}
                         alt=""
-                        width="120"
-                        height="120"
+                        className={esMiniatura ? 'card-img--miniatura' : undefined}
+                        width={esMiniatura ? 160 : 120}
+                        height={esMiniatura ? 90 : 120}
                         loading="lazy"
+                        referrerPolicy="no-referrer"
                         onError={(evento) => {
                             evento.currentTarget.style.visibility = 'hidden';
                         }}

@@ -22,9 +22,17 @@ import {
 import './TagsPage.css';
 import { alertCircleOutline, refreshOutline } from 'ionicons/icons';
 import { tagService } from '../services/tagService.js';
+import { EVENTOS, escuchar } from '../../../app/eventos.js';
 
 const ICONOS_ETIQUETA = ['🏷️', '💻', '🎨', '📚', '🎵', '🎬', '📰', '🍳', '💼', '🛒', '✈️', '⚽', '🔧', '🧪', '🎮'];
 const TAMANO_PAGINA_ETIQUETAS = 200;
+
+/** Mismo orden que devuelve el backend (por nombre). */
+function ordenarPorNombre(lista) {
+    return [...lista].sort((a, b) =>
+        a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+    );
+}
 
 const TagsPage = () => {
     const [etiquetas, setEtiquetas] = useState([]);
@@ -49,8 +57,11 @@ const TagsPage = () => {
         [mostrarToast]
     );
 
-    const cargarDatos = useCallback(async () => {
-        setCargando(true);
+    const cargarDatos = useCallback(async (silencioso = false) => {
+        // Con datos ya en pantalla se recarga en segundo plano, sin skeleton.
+        if (!silencioso) {
+            setCargando(true);
+        }
         const [resultadoEtiquetas, resultadoTotal] = await Promise.allSettled([
             tagService.listar({ limit: TAMANO_PAGINA_ETIQUETAS }),
             tagService.contar(),
@@ -72,11 +83,16 @@ const TagsPage = () => {
                 ? resultadoEtiquetas.value.mensaje
                 : 'No se pudieron cargar las etiquetas.';
             setErrorCarga(mensaje);
-            avisar(mensaje, 'danger');
+            if (!silencioso) {
+                avisar(mensaje, 'danger');
+            }
         }
 
         setCargando(false);
     }, [avisar]);
+
+    const etiquetasRef = useRef([]);
+    etiquetasRef.current = etiquetas;
 
     /** Siguiente página de etiquetas (el backend limita a 500 por petición). */
     const cargarMasEtiquetas = useCallback(async () => {
@@ -114,8 +130,14 @@ const TagsPage = () => {
 
     useIonViewWillEnter(() => {
         cargadoRef.current = true;
-        cargarDatos();
+        cargarDatos(etiquetasRef.current.length > 0);
     });
+
+    // Al crear, editar o borrar links cambian los contadores de cada etiqueta.
+    useEffect(
+        () => escuchar(EVENTOS.LINKS_CAMBIADOS, () => cargarDatos(true)),
+        [cargarDatos]
+    );
 
     const abrirCrear = () => {
         setEtiquetaEditando(null);
@@ -148,9 +170,25 @@ const TagsPage = () => {
             avisar(resultado.mensaje, 'danger');
             return;
         }
+        // Se actualiza la lista al instante con la respuesta del servidor, sin
+        // volver a pedir todas las etiquetas ni mostrar el skeleton.
+        const guardada = resultado.datos;
+        if (etiquetaEditando) {
+            setEtiquetas((previas) =>
+                ordenarPorNombre(
+                    previas.map((item) =>
+                        item.id === guardada.id ? { ...guardada, cantidad: item.cantidad } : item
+                    )
+                )
+            );
+        } else {
+            setEtiquetas((previas) =>
+                ordenarPorNombre([...previas.filter((item) => item.id !== guardada.id), guardada])
+            );
+            setTotalEtiquetas((total) => total + 1);
+        }
         avisar(etiquetaEditando ? 'Etiqueta actualizada.' : 'Etiqueta creada con éxito.');
         setModalAbierto(false);
-        cargarDatos();
     };
 
     const eliminarEtiqueta = (etiqueta) => {
