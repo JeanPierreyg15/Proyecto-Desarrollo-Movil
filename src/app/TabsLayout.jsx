@@ -16,6 +16,7 @@ import LinkListPage from '../features/links/pages/LinkListPage.jsx';
 import TagsPage from '../features/tags/pages/TagsPage.jsx';
 import ProfilePage from '../features/profile/pages/ProfilePage.jsx';
 import { useAuth } from '../features/auth/context/AuthContext.jsx';
+import { Redireccion } from './ProteccionRutas.jsx';
 
 const Layout = () => {
     const { usuario, cargandoSesion } = useAuth();
@@ -31,7 +32,7 @@ const Layout = () => {
     }
 
     if (!usuario) {
-        return <Navigate to="/" replace />;
+        return <Redireccion destino="/" />;
     }
 
     return (

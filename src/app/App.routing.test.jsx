@@ -6,7 +6,7 @@ const { navegacion } = vi.hoisted(() => ({ navegacion: { ruta: '/pages', usuario
 
 vi.mock('@ionic/react', async () => {
     const React = await import('react');
-    const { Link, Routes } = await import('react-router-dom');
+    const { Link, Routes, useNavigate } = await import('react-router-dom');
     const Passthrough = ({ children }) => <div>{children}</div>;
     const IonRouterOutlet = ({ children }) => <Routes>{children}</Routes>;
     return {
@@ -20,6 +20,11 @@ vi.mock('@ionic/react', async () => {
         IonPage: Passthrough,
         IonContent: Passthrough,
         IonSpinner: () => null,
+        // Las redirecciones de ProteccionRutas usan el router de Ionic.
+        useIonRouter: () => {
+            const navigate = useNavigate();
+            return { push: (ruta) => navigate(ruta, { replace: true }) };
+        },
     };
 });
 
@@ -79,10 +84,10 @@ describe('App rutas de /pages', () => {
         navegacion.usuario = { id: 1, nombre: 'Ana', correo: 'ana@ejemplo.com', iniciales: 'A' };
     });
 
-    it('redirige /pages a /pages/Home en lugar de dejar los tabs en blanco', () => {
+    it('redirige /pages a /pages/Home en lugar de dejar los tabs en blanco', async () => {
         render(<App />);
 
-        expect(screen.getByText('pagina-inicio')).toBeInTheDocument();
+        expect(await screen.findByText('pagina-inicio')).toBeInTheDocument();
     });
 
     it('resuelve la ruta relativa de etiquetas dentro de /pages/*', () => {
@@ -99,22 +104,38 @@ describe('App rutas de /pages', () => {
         expect(screen.getByText('pagina-perfil')).toBeInTheDocument();
     });
 
-    it('navega entre las pestañas de etiquetas y perfil', () => {
+    it('navega entre las pestañas de etiquetas y perfil', async () => {
         render(<App />);
 
-        fireEvent.click(screen.getByText('Etiquetas'));
-        expect(screen.getByText('pagina-etiquetas')).toBeInTheDocument();
+        fireEvent.click(await screen.findByText('Etiquetas'));
+        expect(await screen.findByText('pagina-etiquetas')).toBeInTheDocument();
 
         fireEvent.click(screen.getByText('Perfil'));
-        expect(screen.getByText('pagina-perfil')).toBeInTheDocument();
+        expect(await screen.findByText('pagina-perfil')).toBeInTheDocument();
     });
 
-    it('redirige al login al abrir una pestaña sin sesión', () => {
+    it('redirige al login al abrir una pestaña sin sesión', async () => {
         navegacion.ruta = '/pages/Etiquetas';
         navegacion.usuario = null;
         render(<App />);
 
-        expect(screen.getByText('pagina-login')).toBeInTheDocument();
+        expect(await screen.findByText('pagina-login')).toBeInTheDocument();
+    });
+
+    it('permite cambiar de pestaña al abrir / con la sesión ya iniciada', async () => {
+        // Es lo que ocurre al reabrir la app: arranca en el login y la sesión
+        // guardada redirige a Inicio. El login no debe seguir redirigiendo
+        // después (Ionic lo mantiene montado en su pila).
+        navegacion.ruta = '/';
+        render(<App />);
+
+        expect(await screen.findByText('pagina-inicio')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByText('Etiquetas'));
+        expect(await screen.findByText('pagina-etiquetas')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByText('Perfil'));
+        expect(await screen.findByText('pagina-perfil')).toBeInTheDocument();
     });
 
     it('mantiene las rutas públicas fuera de los tabs', () => {
