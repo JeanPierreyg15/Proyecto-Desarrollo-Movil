@@ -21,6 +21,11 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
     const [guardando, setGuardando] = useState(false);
     const [vistaPrevia, setVistaPrevia] = useState(null);
     const [buscandoVista, setBuscandoVista] = useState(false);
+    // URL de imagen que no cargó: se pasa al siguiente candidato (miniatura de
+    // YouTube, imagen guardada, favicon) en vez de dejar el hueco en blanco.
+    const [imagenFallida, setImagenFallida] = useState(null);
+    // La consulta al servidor falló (sin conexión, servidor caído, timeout...).
+    const [errorVista, setErrorVista] = useState(false);
     const [mostrarToast] = useIonToast();
     // Último título puesto automáticamente: si la persona no lo ha tocado, se
     // puede reemplazar al cambiar la URL; si lo editó, se respeta.
@@ -59,9 +64,13 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
         if (!isOpen || !urlNormalizada) {
             setVistaPrevia(null);
             setBuscandoVista(false);
+            setImagenFallida(null);
+            setErrorVista(false);
             return undefined;
         }
         let vigente = true;
+        setImagenFallida(null);
+        setErrorVista(false);
         setBuscandoVista(true);
         const temporizador = setTimeout(async () => {
             const resultado = await linkService.previsualizar(urlNormalizada);
@@ -70,9 +79,15 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
             }
             setBuscandoVista(false);
             if (!resultado?.ok) {
-                setVistaPrevia(null);
+                setErrorVista(true);
+                // Un fallo puntual (red, timeout o límite de peticiones) no borra
+                // la información que ya se mostró para esta misma URL.
+                setVistaPrevia((previa) =>
+                    previa?.url === urlNormalizada ? previa : null
+                );
                 return;
             }
+            setErrorVista(false);
             setVistaPrevia(resultado.datos);
             const sugerido = resultado.datos.titulo;
             const actual = tituloRef.current.trim();
@@ -144,18 +159,31 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
     };
 
     const host = urlNormalizada ? dominioDeUrl(urlNormalizada) : '';
-    const favicon = urlNormalizada ? faviconDeUrl(urlNormalizada) : null;
     // Miniatura solo para contenido multimedia (YouTube, Vimeo, Spotify...).
     // La de YouTube se conoce al instante; las demás llegan con la vista previa.
     // Si se edita sin cambiar la URL, se conserva la que ya tenía el link.
     const urlOriginal = editando ? normalizarUrl(link.url ?? '') : null;
+    const miniaturaPrevia =
+        vistaPrevia?.miniatura && vistaPrevia.miniatura !== imagenFallida
+            ? vistaPrevia.miniatura
+            : null;
     const miniatura = urlNormalizada
-        ? vistaPrevia?.miniatura ||
+        ? miniaturaPrevia ||
           miniaturaYoutube(urlNormalizada) ||
           (!vistaPrevia && urlNormalizada === urlOriginal ? link.miniatura ?? null : null)
         : null;
-    // En páginas normales se muestra solo el icono del sitio.
-    const imagenPrevia = miniatura || favicon;
+    // Cadena de imágenes: si una no carga se prueba la siguiente en lugar de
+    // quedarse con el hueco (antes la imagen "aparecía y desaparecía").
+    const candidatosImagen = urlNormalizada
+        ? [
+              miniaturaPrevia,
+              miniaturaYoutube(urlNormalizada),
+              !vistaPrevia && urlNormalizada === urlOriginal ? link.miniatura : null,
+              faviconDeUrl(urlNormalizada),
+          ]
+        : [];
+    const imagenPrevia =
+        candidatosImagen.find((candidato) => Boolean(candidato) && candidato !== imagenFallida) ?? null;
 
     return (
         <IonModal
@@ -205,9 +233,7 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
                                         width="60"
                                         height="60"
                                         referrerPolicy="no-referrer"
-                                        onError={(evento) => {
-                                            evento.currentTarget.style.visibility = 'hidden';
-                                        }}
+                                        onError={() => setImagenFallida(imagenPrevia)}
                                     />
                                 ) : (
                                     <div className="previa-img" aria-hidden="true" />
@@ -220,6 +246,14 @@ const Modal = ({ isOpen, cerrarModal, etiquetas = [], onGuardado, link = null })
                                     ) : null}
                                     {buscandoVista ? (
                                         <p className="previa-estado" role="status">Obteniendo información de la página...</p>
+                                    ) : errorVista ? (
+                                        <p className="previa-estado" role="status">
+                                            No se pudo consultar la página. Revisa tu conexión.
+                                        </p>
+                                    ) : vistaPrevia && !vistaPrevia.titulo && !vistaPrevia.descripcion ? (
+                                        <p className="previa-estado" role="status">
+                                            No se pudo obtener información de este enlace. Revisa la URL.
+                                        </p>
                                     ) : null}
                                 </div>
                             </div>

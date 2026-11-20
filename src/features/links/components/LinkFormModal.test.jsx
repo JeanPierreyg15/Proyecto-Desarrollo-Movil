@@ -117,6 +117,72 @@ describe('LinkFormModal', () => {
         });
     });
 
+    it('si la imagen de la vista previa falla, prueba la siguiente sin dejar el hueco', async () => {
+        previsualizar.mockResolvedValue({
+            ok: true,
+            datos: {
+                url: 'https://youtu.be/dQw4w9WgXcQ',
+                titulo: 'Video',
+                descripcion: null,
+                miniatura: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+                sitio: 'YouTube',
+            },
+        });
+        const { container } = render(
+            <LinkFormModal isOpen cerrarModal={vi.fn()} etiquetas={[]} onGuardado={vi.fn()} />
+        );
+
+        fireEvent.change(screen.getByLabelText('https://...'), {
+            target: { value: 'youtu.be/dQw4w9WgXcQ' },
+        });
+
+        await waitFor(() =>
+            expect(container.querySelector('img')).toHaveAttribute(
+                'src',
+                'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg'
+            )
+        );
+
+        // maxresdefault no existe en todos los videos: se cae a hqdefault.
+        fireEvent.error(container.querySelector('img'));
+
+        await waitFor(() =>
+            expect(container.querySelector('img')).toHaveAttribute(
+                'src',
+                'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+            )
+        );
+    });
+
+    it('no autocompleta un título genérico si la página no dio información', async () => {
+        previsualizar.mockResolvedValue({
+            ok: true,
+            datos: { url: 'https://m.youtube.com/watch?v=corto', titulo: null, descripcion: null, sitio: 'YouTube' },
+        });
+        render(<LinkFormModal isOpen cerrarModal={vi.fn()} etiquetas={[]} onGuardado={vi.fn()} />);
+
+        fireEvent.change(screen.getByLabelText('https://...'), {
+            target: { value: 'm.youtube.com/watch?v=corto' },
+        });
+
+        await waitFor(() =>
+            expect(screen.getByText(/No se pudo obtener información de este enlace/)).toBeInTheDocument()
+        );
+        expect(screen.getByLabelText('Ej: Mi portafolio')).toHaveValue('');
+    });
+
+    it('avisa cuando la consulta al servidor falla', async () => {
+        render(<LinkFormModal isOpen cerrarModal={vi.fn()} etiquetas={[]} onGuardado={vi.fn()} />);
+
+        fireEvent.change(screen.getByLabelText('https://...'), {
+            target: { value: 'ejemplo.com' },
+        });
+
+        await waitFor(() =>
+            expect(screen.getByText(/No se pudo consultar la página/)).toBeInTheDocument()
+        );
+    });
+
     it('guarda la miniatura de YouTube y en páginas normales no guarda imagen', async () => {
         render(
             <LinkFormModal
