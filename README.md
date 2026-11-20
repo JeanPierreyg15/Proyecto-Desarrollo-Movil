@@ -82,6 +82,9 @@ hay que aplicar esta configuración localmente al crearlo o regenerarlo.
   solo si el backend responde a una petición desde loopback. En producción el
   backend envía el código por SMTP.
 - Sesión expirada: cualquier 401 limpia el token y redirige al login.
+- Al reabrir la app con la sesión iniciada, la redirección al inicio ocurre una
+  sola vez y limpia la pila de navegación (`Redireccion` en
+  `ProteccionRutas.jsx`), así el login ya no intercepta los toques en las pestañas.
 - Cambio de contraseña real (`PUT /auth/password`) que invalida sesiones anteriores.
 
 ### Inicio (Mi Baúl)
@@ -145,7 +148,9 @@ src/
 ├── app/
 │   ├── App.jsx              # Rutas principales y providers
 │   ├── TabsLayout.jsx       # Tabs Inicio / Etiquetas / Perfil
-│   ├── ProteccionRutas.jsx  # Rutas protegidas y públicas
+│   ├── ProteccionRutas.jsx  # Rutas protegidas/públicas y redirección segura
+│   ├── AvisosSesion.jsx     # Franja "Sin conexión" y aviso de sesión expirada
+│   ├── botonAtras.js        # Botón atrás de Android (Inicio / minimizar la app)
 │   ├── apiClient.js         # fetch central, timeout 15 s y manejo de 401
 │   ├── almacenamiento.js    # Token y perfil en almacén seguro (localStorage en web)
 │   ├── enlaces.js           # Abrir, copiar y compartir enlaces
@@ -184,7 +189,7 @@ formulario de links (incluido el autocompletado del título por la vista previa,
 que no pisa un título escrito a mano, y el guardado de la miniatura de YouTube),
 las rutas de `/pages`, la lista de enlaces (refresco silencioso, carreras y
 filtros), las etiquetas (error y paginación), la accesibilidad de `LinkCard` y
-el botón atrás de Android (68 tests).
+el botón atrás de Android (70 tests).
 
 > Si Vitest falla con `Failed to resolve import "@testing-library/jest-dom/vitest"`,
 > falta instalar dependencias: ejecuta `npm install`.
